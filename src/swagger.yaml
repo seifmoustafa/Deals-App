@@ -1,0 +1,277 @@
+openapi: 3.0.0
+info:
+  title: InPocket API
+  description: API endpoints for InPocket
+  version: 1.0.0
+  contact:
+    email: support@inpocket.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://inpocket-backend.onrender.com/health
+    description: Testing server
+
+tags:
+  - name: Authentication
+    description: User authentication and registration endpoints
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - email
+        - password
+        - full_name
+        - phone
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: '******'
+        full_name:
+          type: string
+          example: John Doe
+        phone:
+          type: string
+          example: '+1234567890'
+
+    OTPVerification:
+      type: object
+      required:
+        - email
+        - otp
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        otp:
+          type: string
+          example: '123456'
+
+    Login:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: '******'
+
+    OAuthLogin:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          description: Firebase ID token
+          example: 'eyJhbGciOiJSUzI1NiIsImtpZCI6...'
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Invalid credentials'
+
+  responses:
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Invalid input parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    msg:
+                      type: string
+                    param:
+                      type: string
+                    location:
+                      type: string
+
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Creates a new user account and sends verification OTP via email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  email:
+                    type: string
+                    format: email
+                    example: user@example.com
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/auth/verify-email:
+    post:
+      tags:
+        - Authentication
+      summary: Verify email address
+      description: Verifies user's email address using the OTP sent during registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerification'
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  full_name:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+                  phone:
+                    type: string
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login with email and password
+      description: Authenticates a user using email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  full_name:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+                  phone:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/auth/oauth:
+    post:
+      tags:
+        - Authentication
+      summary: OAuth sign in
+      description: Authenticates a user using Firebase OAuth token (Google/Facebook)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OAuthLogin'
+      responses:
+        '200':
+          description: OAuth login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  full_name:
+                    type: string
+                  email:
+                    type: string
+                    format: email
+                  phone:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/auth/resend-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Resend verification OTP
+      description: Resends the email verification OTP to the user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'OTP sent successfully'
+        '400':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
