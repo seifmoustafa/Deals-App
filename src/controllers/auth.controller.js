@@ -4,7 +4,6 @@ const { validationResult } = require('express-validator');
 const controller = {
   register: async (req, res) => {
     try {
-      console.log("jkjjkjkjk");
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
