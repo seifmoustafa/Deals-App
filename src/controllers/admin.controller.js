@@ -57,7 +57,7 @@ const controller = {
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .lean();
+        //.lean();
 
       const totalAdmins = await Admin.countDocuments();
       const totalPages = Math.ceil(totalAdmins / limit);

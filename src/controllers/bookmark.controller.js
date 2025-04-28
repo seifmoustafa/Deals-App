@@ -9,10 +9,21 @@ const controller = {
       const skip = (parseInt(PageNumber) - 1) * parseInt(PageSize);
       const bookmarks = await Bookmark.find({ firebase_uid }).populate('store' , 'title image total_coupons cashback')
       .skip(skip)
-      .limit(parseInt(PageSize));
+      .limit(parseInt(PageSize))
+      .lean();
       const total = await Bookmark.countDocuments({ firebase_uid });
+
+      const transformedBookmarks = bookmarks.map((bookmark) => ({
+        ...bookmark,
+        store: {
+          ...bookmark.store,
+          cashback: {
+            rate: bookmark.store?.cashback?.rate ?? 0, // safely get cashback rate
+          },
+        },
+      }));
       res.status(200).json({
-        data: bookmarks,
+        data: transformedBookmarks,
         pagination: {
           PageNumber: parseInt(PageNumber),
           PageSize: parseInt(PageSize),
