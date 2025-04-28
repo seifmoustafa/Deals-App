@@ -5,8 +5,21 @@ const controller = {
   getAll: async (req, res) => {
     try {
       const { firebase_uid } = req.params;
-      const bookmarks = await Bookmark.find({ firebase_uid }).populate('store');
-      res.status(200).json(bookmarks);
+      const { PageNumber = 1, PageSize = 10 } = req.query;
+      const skip = (parseInt(PageNumber) - 1) * parseInt(PageSize);
+      const bookmarks = await Bookmark.find({ firebase_uid }).populate('store' , 'title image total_coupons cashback')
+      .skip(skip)
+      .limit(parseInt(PageSize));
+      const total = await Bookmark.countDocuments({ firebase_uid });
+      res.status(200).json({
+        data: bookmarks,
+        pagination: {
+          PageNumber: parseInt(PageNumber),
+          PageSize: parseInt(PageSize),
+          ItemsCount : total,
+          totalPages: Math.ceil(total / PageSize),
+        },
+      });
     } catch (error) {
       res.status(500).json({
         message: 'Error while getting the bookmarks',
