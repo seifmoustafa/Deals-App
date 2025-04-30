@@ -255,9 +255,10 @@ class AuthService {
     }
   }
 
-  async deleteAccount(userId) {
+  async deleteAccount(firebase_uid) {
     try {
-      const user = await User.findById(userId);
+      const user = await User.findOne({firebase_uid});
+      //const user = await User.findById(userId);
       if (!user) {
         throw new Error('User not found');
       }

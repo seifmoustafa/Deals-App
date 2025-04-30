@@ -33,7 +33,9 @@ const controller = {
 
   async getById(req, res) {
     try {
-      const user = await User.findById(req.params.id);
+      const { firebase_uid } = req.params;
+      const user = await User.findOne({firebase_uid});
+      //const user = await User.findById(req.params.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -62,7 +64,9 @@ const controller = {
 
   async update(req, res) {
     try {
-      const user = await User.findById(req.params.id);
+      const { firebase_uid } = req.params;
+      const user = await User.findOne({firebase_uid});
+     // const user = await User.findById(req.params.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -82,7 +86,8 @@ const controller = {
 
   delete: async (req, res) => {
     try {
-      const result = await authService.deleteAccount(req.params.id);
+      const { firebase_uid } = req.params;
+      const result = await authService.deleteAccount(firebase_uid);
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({ message: error.message });

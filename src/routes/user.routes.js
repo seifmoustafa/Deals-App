@@ -4,12 +4,12 @@ const controller = require('../controllers/user.controller');
 
 router.get('/', controller.getAll);
 
-router.get('/:id', controller.getById);
+router.get('/:firebase_uid', controller.getById);
 
 router.post('/', controller.create);
 
-router.patch('/:id', controller.update);
+router.patch('/:firebase_uid', controller.update);
 
-router.delete('/:id', controller.delete);
+router.delete('/:firebase_uid', controller.delete);
 
 module.exports = router;
