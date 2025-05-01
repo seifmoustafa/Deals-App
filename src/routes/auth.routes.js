@@ -29,4 +29,6 @@ router.post('/reset-password', controller.resetPassword);
 
 router.post('/logout', controller.logout);
 
+router.post('/change-password', controller.changePassword);
+
 module.exports = router;

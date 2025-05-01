@@ -112,6 +112,25 @@ const controller = {
       res.status(500).json({ message: error.message });
     }
   },
+
+
+  changePassword: async (req, res) => {
+    try {
+      const { email, currentPassword, newPassword } = req.body;
+  
+      if (!email || !currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+  
+      const result = await authService.changeUserPassword(email, currentPassword, newPassword);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+
 };
+
 
 module.exports = controller;

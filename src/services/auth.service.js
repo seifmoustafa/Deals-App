@@ -270,6 +270,30 @@ class AuthService {
       throw new Error('Failed to delete user account');
     }
   }
+
+  async changeUserPassword(email, currentPassword, newPassword) {
+    const user = await User.findOne({ email }).select('+password');
+  
+    if (!user) {
+      throw new Error('User not found');
+    }
+  
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      throw new Error('Current password is incorrect');
+    }
+  
+    user.password = newPassword;
+    user.markModified('password');
+    await user.save();
+  
+    const firebaseUser = await admin.auth().getUserByEmail(email);
+    await admin.auth().updateUser(firebaseUser.uid, {
+      password: newPassword,
+    });
+  
+    return { message: 'Password changed successfully' };
+  }
 }
 
 module.exports = new AuthService();
