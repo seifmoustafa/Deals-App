@@ -1,5 +1,6 @@
 const User = require('../models/User.model');
 const Notification = require('../models/Notification.model');
+const admin = require('firebase-admin');
 
 const controller = {
   allow: async (req, res) => {
@@ -52,10 +53,8 @@ const controller = {
         update = { $set: { fcm_tokens: [] } };
       }
 
-      const user = await User.findByIdAndUpdate({ firebase_uid }, update, {
-        new: true,
-      });
-
+      //const user = await User.findByIdAndUpdate({ firebase_uid }, update, {new: true });
+      const user = await User.findOneAndUpdate({ firebase_uid }, update, { new: true });
       if (!user) {
         return res
           .status(404)
@@ -146,6 +145,38 @@ const controller = {
       return res.status(500).json({ success: false, message: 'Server error' });
     }
   },
+
+  sendNotification: async (req, res) => {
+    try {
+      const { firebase_uid, title, body } = req.body;
+  
+      const user = await User.findOne({ firebase_uid });
+      if (!user || user.fcm_tokens.length === 0) {
+        return res.status(404).json({ success: false, message: 'No tokens found' });
+      }
+  
+      const message = {
+        notification: {
+          title,
+          body,
+        },
+        tokens: user.fcm_tokens, // Can be a single token or an array
+      };
+  
+      const response = await admin.messaging().sendMulticast(message);
+  
+      return res.status(200).json({
+        success: true,
+        message: 'Notification sent',
+        response,
+      });
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      return res.status(500).json({ success: false, message: 'Server error' });
+    }
+},
 };
 
+
+  
 module.exports = controller;
