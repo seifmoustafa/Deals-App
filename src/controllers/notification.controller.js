@@ -1,7 +1,7 @@
 const User = require('../models/User.model');
 const Notification = require('../models/Notification.model');
 const admin = require('firebase-admin');
-const Store = require('../models/store.model');
+const Store = require('../models/Store.model');
 const fcmService = require('../services/notification.service');
 
 
