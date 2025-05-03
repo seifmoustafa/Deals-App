@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const Notification = require('../models/Notification.model');
 const admin = require('firebase-admin');
 const Store = require('../models/store.model');
+const Coupon = require('../models/Coupon.model');
 const fcmService = require('../services/notification.service');
 
 
@@ -267,6 +268,91 @@ sendStoreToAllUsers: async (req, res) => {
     });
   } catch (err) {
     console.error('Error sending to all users:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+},
+
+sendCouponToFirebaseUids: async (req, res) => {
+  try {
+    const { firebaseUids, couponId } = req.body;
+
+    if (!Array.isArray(firebaseUids) || !couponId) {
+      return res.status(400).json({ success: false, message: 'firebaseUids (array) and couponId are required' });
+    }
+
+    const coupon = await Coupon.findById(couponId).populate('store');
+    if (!coupon || !coupon.store) {
+      return res.status(404).json({ success: false, message: 'Coupon or associated store not found' });
+    }
+
+    const notification = {
+      title: coupon.store.title,
+      body: `🔥 New coupon available: ${coupon.title} - ${coupon.description || 'Check it out!'}`,
+    };
+
+    const data = {
+      couponId: coupon._id.toString(),
+      storeId: coupon.store._id.toString(),
+    };
+
+    const result = await fcmService.sendToUsers(firebaseUids, notification, data, true);
+
+    return res.status(200).json({
+      success: true,
+      store: {
+        title: coupon.store.title,
+        image: coupon.store.image?.url || null,
+      },
+      coupon,
+      message: notification.body,
+      ...result,
+    });
+  } catch (error) {
+    console.error('Error sending coupon notification:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+},
+
+sendCouponToAllUsers: async (req, res) => {
+  try {
+    const { couponId } = req.body;
+
+    if (!couponId) {
+      return res.status(400).json({ success: false, message: 'couponId is required' });
+    }
+
+    const coupon = await Coupon.findById(couponId).populate('store');
+    if (!coupon || !coupon.store) {
+      return res.status(404).json({ success: false, message: 'Coupon or associated store not found' });
+    }
+
+    const users = await User.find({ fcm_tokens: { $exists: true, $ne: [] } });
+    const firebaseUids = users.map((u) => u.firebase_uid);
+
+    const notification = {
+      title: coupon.store.title,
+      body: `🔥 New coupon available: ${coupon.title} - ${coupon.description || 'Check it out!'}`,
+    };
+
+    const data = {
+      couponId: coupon._id.toString(),
+      storeId: coupon.store._id.toString(),
+    };
+
+    const result = await fcmService.sendToUsers(firebaseUids, notification, data, true);
+
+    return res.status(200).json({
+      success: true,
+      store: {
+        title: coupon.store.title,
+        image: coupon.store.image?.url || null,
+      },
+      coupon,
+      message: notification.body,
+      ...result,
+    });
+  } catch (error) {
+    console.error('Error sending coupon to all users:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 },

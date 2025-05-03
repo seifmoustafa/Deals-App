@@ -16,4 +16,8 @@ router.post('/send-store-to-users', controller.sendStoreToFirebaseUids);
 
 router.post('/send-store-to-all', controller.sendStoreToAllUsers);
 
+router.post('/send-coupon-to-users', controller.sendCouponToFirebaseUids);
+
+router.post('/send-coupon-to-all', controller.sendCouponToAllUsers);
+
 module.exports = router;
