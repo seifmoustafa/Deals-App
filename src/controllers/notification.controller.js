@@ -1,6 +1,9 @@
 const User = require('../models/User.model');
 const Notification = require('../models/Notification.model');
 const admin = require('firebase-admin');
+const Store = require('../models/store.model');
+const fcmService = require('../services/notification.service');
+
 
 const controller = {
   allow: async (req, res) => {
@@ -175,6 +178,99 @@ const controller = {
       return res.status(500).json({ success: false, message: 'Server error' });
     }
 },
+
+
+sendStoreToFirebaseUids: async (req, res) => {
+  try {
+    const { firebaseUids, storeId } = req.body;
+
+    if (!Array.isArray(firebaseUids) || !storeId) {
+      return res.status(400).json({ success: false, message: 'firebaseUids (array) and storeId are required' });
+    }
+
+    console.log('🔥 Incoming request body:', req.body);
+
+    const store = await Store.findById(storeId);
+    console.log('🛒 Store fetched:', store);
+
+    if (!store) {
+      return res.status(404).json({ success: false, message: 'Store not found' });
+    }
+
+    const notification = {
+      title: store.title,
+      body: `New offers available at ${store.title}!`,
+    };
+
+    console.log('📣 Notification content:', notification);
+
+
+    const data = {
+      storeId: storeId.toString(),
+    };
+
+    const result = await fcmService.sendToUsers(firebaseUids, notification, data, true);
+
+    console.log('✅ FCM service result:', result);
+
+    return res.status(200).json({
+      success: true,
+      store: {
+        title: store.title,
+        image: store.image?.url || null,
+      },
+      message: notification.body,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Error sending to firebaseUids:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+},
+
+
+sendStoreToAllUsers: async (req, res) => {
+  try {
+    const { storeId } = req.body;
+
+    if (!storeId) {
+      return res.status(400).json({ success: false, message: 'storeId is required' });
+    }
+
+    const store = await Store.findById(storeId);
+    if (!store) {
+      return res.status(404).json({ success: false, message: 'Store not found' });
+    }
+
+    const users = await User.find({ fcm_tokens: { $exists: true, $ne: [] } });
+    const firebaseUids = users.map((u) => u.firebase_uid);
+
+    const notification = {
+      title: store.title,
+      body: `New offers available at ${store.title}!`,
+    };
+
+    const data = {
+      storeId: storeId.toString(),
+    };
+
+    const result = await fcmService.sendToUsers(firebaseUids, notification, data, true);
+
+    return res.status(200).json({
+      success: true,
+      store: {
+        title: store.title,
+        image: store.image?.url || null,
+      },
+      message: notification.body,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Error sending to all users:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+},
+
 };
 
 

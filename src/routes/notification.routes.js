@@ -12,4 +12,8 @@ router.patch('/read', controller.read);
 
 router.post('/send', controller.sendNotification);
 
+router.post('/send-store-to-users', controller.sendStoreToFirebaseUids);
+
+router.post('/send-store-to-all', controller.sendStoreToAllUsers);
+
 module.exports = router;

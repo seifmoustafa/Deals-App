@@ -154,6 +154,9 @@ storeSchema.methods.updateAverageSavings = async function () {
   }
 };
 
-const Store = mongoose.model('Store', storeSchema);
+ // const Store = mongoose.model('Store', storeSchema);
+// module.exports = Store;
 
-module.exports = Store;
+ module.exports = mongoose.models.Store || mongoose.model('Store', storeSchema);
+
+
