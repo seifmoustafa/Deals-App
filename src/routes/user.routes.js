@@ -1,15 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/user.controller');
+const authenticateJwt = require('../middlewares/authorization.middleware');
 
-router.get('/', controller.getAll);
 
-router.get('/:firebase_uid', controller.getById);
+router.get('/',authenticateJwt, controller.getAll);
 
-router.post('/', controller.create);
+router.get('/:firebase_uid',authenticateJwt, controller.getById);
 
-router.patch('/:firebase_uid', controller.update);
+router.post('/',authenticateJwt, controller.create);
 
-router.delete('/:firebase_uid', controller.delete);
+router.patch('/:firebase_uid',authenticateJwt, controller.update);
+
+router.delete('/:firebase_uid',authenticateJwt, controller.delete);
 
 module.exports = router;

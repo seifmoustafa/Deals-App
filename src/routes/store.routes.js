@@ -2,15 +2,17 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/store.controller');
 const Store = require('../models/Store.model');
+const authenticateJwt = require('../middlewares/authorization.middleware');
 
-router.get('/', controller.getAll);
 
-router.get('/:id', controller.getSingle);
+router.get('/',authenticateJwt, controller.getAll);
 
-router.post('/', controller.create);
+router.get('/:id',authenticateJwt, controller.getSingle);
 
-router.patch('/:id', controller.update);
+router.post('/',authenticateJwt, controller.create);
 
-router.delete('/:id', controller.delete);
+router.patch('/:id',authenticateJwt, controller.update);
+
+router.delete('/:id',authenticateJwt, controller.delete);
 
 module.exports = router;

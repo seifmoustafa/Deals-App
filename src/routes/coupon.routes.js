@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/coupon.controller');
-const authenticateUser = require('../middlewares/auth.middleware');
+const authenticateJwt = require('../middlewares/authorization.middleware');
 
-router.get('/', controller.getAll);
 
-router.get('/:id', controller.getSingle);
+router.get('/',authenticateJwt, controller.getAll);
 
-router.post('/', controller.create);
+router.get('/:id',authenticateJwt, controller.getSingle);
 
-router.patch('/:id', controller.update);
+router.post('/',authenticateJwt, controller.create);
 
-router.delete('/:id', controller.delete);
+router.patch('/:id',authenticateJwt, controller.update);
+
+router.delete('/:id',authenticateJwt, controller.delete);
 
 module.exports = router;

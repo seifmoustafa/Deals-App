@@ -1,5 +1,7 @@
 const authService = require('../services/auth.service');
 const { validationResult } = require('express-validator');
+const { generateToken } = require('../utils/JWTUtility');
+const User = require('../models/User.model');
 
 const controller = {
   register: async (req, res) => {
@@ -29,10 +31,33 @@ const controller = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
-      const user = await authService.signInWithEmail(email, password);
-      res.json(user);
+
+      const firebaseUser = await authService.signInWithEmail(email, password);
+      if (!firebaseUser) {
+        return res.status(401).json({ message: 'Invalid Firebase credentials' });
+      }
+
+      const user = await User.findOne({ firebase_uid: firebaseUser.firebase_uid }).select('+password');
+      if (!user) {
+        return res.status(404).json({ message: 'User not found in DB' });
+      }
+
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      if (!user.is_active) {
+        return res.status(403).json({ message: 'User is inactive' });
+      }
+
+      const token = generateToken(user)
+      res.json({
+        token,
+        user: user.toPublicJSON(),
+      });
     } catch (error) {
-      res.status(401).json({ message: error.message });
+      console.error('Login error:', error);
+      res.status(401).json({ message: 'Invalid Firebase ID token' });
     }
   },
 
@@ -40,10 +65,32 @@ const controller = {
     try {
       const { token } = req.body;
       const user = await authService.handleOAuthSignIn(token);
-      res.json(user);
+      if (!user) {
+        return res.status(404).json({ message: 'Invalid credentials' });
+      }
+
+      // const isPasswordValid = await user.comparePassword(password);
+      // if (!isPasswordValid) {
+      //   return res.status(401).json({ message: 'Invalid credentials' });
+      // }
+      if (!user.is_active) {
+        return res.status(403).json({ message: 'User is inactive' });
+      }
+
+      const Jwttoken = generateToken(user)
+      res.json({
+        Jwttoken,
+        user: user,
+      });
     } catch (error) {
-      res.status(401).json({ message: error.message });
+      console.error('Login error:', error);
+      res.status(401).json({ message: 'Invalid Firebase ID token' });
     }
+
+    //   res.json(user);
+    // } catch (error) {
+    //   res.status(401).json({ message: error.message });
+    // }
   },
 
   resendOTP: async (req, res) => {
