@@ -155,23 +155,65 @@ getAll: async (req, res) => {
   // },
 
   create: async (req, res) => {
-    try {
-      const { firebase_uid, storeId } = req.body;
-      const user = await User.findOne({ firebase_uid });
-      const userId = user._id;
-      const bookmark = await Bookmark.create({
-        user: userId,
-        firebase_uid,
-        store: storeId,
-      });
-      res.status(201).json(bookmark);
-    } catch (error) {
-      res.status(500).json({
-        message: 'Error while creating the bookmark',
-        error,
+  try {
+    const { firebase_uid, storeId } = req.body;
+
+    // Find user by Firebase UID
+    const user = await User.findOne({ firebase_uid });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userId = user._id;
+
+    // Check if the bookmark already exists
+    const existingBookmark = await Bookmark.findOne({
+      firebase_uid,
+      store: storeId,
+    });
+
+    if (existingBookmark) {
+      return res.status(400).json({
+        message: 'Bookmark already exists for this store and user',
+        bookmark: existingBookmark,
       });
     }
-  },
+
+    // Create new bookmark
+    const bookmark = await Bookmark.create({
+      user: userId,
+      firebase_uid,
+      store: storeId,
+    });
+
+    res.status(201).json(bookmark);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Error while creating the bookmark',
+      error,
+    });
+  }
+},
+
+
+  // create: async (req, res) => {
+  //   try {
+  //     const { firebase_uid, storeId } = req.body;
+  //     const user = await User.findOne({ firebase_uid });
+  //     const userId = user._id;
+  //     const bookmark = await Bookmark.create({
+  //       user: userId,
+  //       firebase_uid,
+  //       store: storeId,
+  //     });
+  //     res.status(201).json(bookmark);
+  //   } catch (error) {
+  //     res.status(500).json({
+  //       message: 'Error while creating the bookmark',
+  //       error,
+  //     });
+  //   }
+  // },
 
   delete: async (req, res) => {
     try {
