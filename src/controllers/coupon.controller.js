@@ -132,26 +132,26 @@ const controller = {
 
     try {
       const newCoupon = await coupon.save();
-      const users = await User.find();
-      const store = await Store.findById(req.body.store);
+      // const users = await User.find();
+      // const store = await Store.findById(req.body.store);
 
-      const ids = users.map((user) => user.firebase_uid);
+      // const ids = users.map((user) => user.firebase_uid);
 
-      const notification = {
-        title: store.title,
-        body: 'New coupons were added',
-      };
+      // const notification = {
+      //   title: store.title,
+      //   body: 'New coupons were added',
+      // };
 
-      const data = {
-        store: store.id,
-        storeName: store.title,
-        image: store.image?.url,
-        coupon: newCoupon.id,
-      };
+      // const data = {
+      //   store: store.id,
+      //   storeName: store.title,
+      //   image: store.image?.url,
+      //   coupon: newCoupon.id,
+      // };
 
-      const saveToDB = true;
+      // const saveToDB = true;
 
-      await notificationService.sendToUsers(ids, notification, data, saveToDB);
+      // await notificationService.sendToUsers(ids, notification, data, saveToDB);
       res.status(201).json(newCoupon);
     } catch (error) {
       res.status(400).json({ message: error.message });
