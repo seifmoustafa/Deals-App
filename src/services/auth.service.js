@@ -163,7 +163,7 @@ class AuthService {
   async handleOAuthSignIn(token) {
     try {
       const decodedToken = await admin.auth().verifyIdToken(token);
-      const { uid, email, name, picture, firebase } = decodedToken;
+      const { uid, email, name, picture, firebase , phone_number} = decodedToken;
 
       let user = await User.findOne({ firebase_uid: uid });
 
@@ -178,6 +178,8 @@ class AuthService {
           firebase_uid: uid,
           profile_image: { url: picture },
           is_active: true,
+          phone: phone_number || null,
+        //  phone: null,
         });
         await user.save();
       }
