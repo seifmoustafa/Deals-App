@@ -84,73 +84,69 @@ const fcmService = {
    * @param {boolean} saveToDb - Whether to save notifications to database
    * @returns {Promise<object>} - Result of send operation
    */
-  sendToUsers: async (userIds, notification, data = {}, saveToDb = true) => {
+  sendToUsers: async (firebaseUids, notification, data = {}, saveToDb = true) => {
     try {
-      const users = await User.find({ firebase_uid: { $in: userIds } });
-
+      const users = await User.find({ firebase_uid: { $in: firebaseUids } });
+  
       let successCount = 0;
       let failureCount = 0;
       const failureMap = {};
-
-      // Process each user
+      const notifications = [];
+  
       for (const user of users) {
-        if (!user.fcm_tokens || user.fcm_tokens.length === 0) {
-          continue;
-        }
-
-        const userId = user._id.toString();
-
-        // Process each token for the current user
+        const uid = user.firebase_uid;
+  
+        if (!user.fcm_tokens || user.fcm_tokens.length === 0) continue;
+  
         for (const token of user.fcm_tokens) {
           const message = {
             notification: {
               title: notification.title,
               body: notification.body,
             },
-            token: token, // Send to individual token
+            token,
           };
-
+  
           try {
             await admin.messaging().send(message);
             successCount++;
+  
+            if (saveToDb) {
+              notifications.push({
+                userId: uid, // saving firebase_uid instead of MongoDB _id
+                title: notification.title,
+                body: notification.body,
+                data,
+              });
+            }
           } catch (error) {
             failureCount++;
-            if (!failureMap[userId]) failureMap[userId] = [];
-            failureMap[userId].push(token);
+            if (!failureMap[uid]) failureMap[uid] = [];
+            failureMap[uid].push(token);
             console.log(`Failed to send to token: ${token}`, error.message);
           }
         }
       }
-
-      // Save notifications to database if requested
-      if (saveToDb) {
-        const notifications = userIds.map((userId) => ({
-          userId,
-          title: notification.title,
-          body: notification.body,
-          data: data,
-        }));
-
+  
+      if (saveToDb && notifications.length > 0) {
         await Notification.insertMany(notifications);
       }
-
-      // Remove failed tokens from users
-      const updatePromises = Object.entries(failureMap).map(
-        ([userId, tokens]) => {
-          return User.findByIdAndUpdate(userId, {
-            $pull: { fcm_tokens: { $in: tokens } },
-          });
-        },
+  
+      // Clean up failed tokens
+      const updatePromises = Object.entries(failureMap).map(([uid, tokens]) =>
+        User.findOneAndUpdate({ firebase_uid: uid }, {
+          $pull: { fcm_tokens: { $in: tokens } },
+        })
       );
-
+  
       if (updatePromises.length > 0) {
         await Promise.all(updatePromises);
       }
-
+  
       return {
         success: true,
-        successCount: successCount,
-        failureCount: failureCount,
+        successCount,
+        failureCount,
       };
     } catch (error) {
       console.error('FCM bulk send error:', error);
@@ -159,7 +155,84 @@ const fcmService = {
         error: error.message,
       };
     }
-  },
+  }
+  
+  // sendToUsers: async (userIds, notification, data = {}, saveToDb = true) => {
+  //   try {
+  //     const users = await User.find({ firebase_uid: { $in: userIds } });
+
+  //     let successCount = 0;
+  //     let failureCount = 0;
+  //     const failureMap = {};
+
+  //     // Process each user
+  //     for (const user of users) {
+  //       if (!user.fcm_tokens || user.fcm_tokens.length === 0) {
+  //         continue;
+  //       }
+
+  //       const userId = user._id.toString();
+
+  //       // Process each token for the current user
+  //       for (const token of user.fcm_tokens) {
+  //         const message = {
+  //           notification: {
+  //             title: notification.title,
+  //             body: notification.body,
+  //           },
+  //           token: token, // Send to individual token
+  //         };
+
+  //         try {
+  //           await admin.messaging().send(message);
+  //           successCount++;
+  //         } catch (error) {
+  //           failureCount++;
+  //           if (!failureMap[userId]) failureMap[userId] = [];
+  //           failureMap[userId].push(token);
+  //           console.log(`Failed to send to token: ${token}`, error.message);
+  //         }
+  //       }
+  //     }
+
+  //     // Save notifications to database if requested
+  //     if (saveToDb) {
+  //       const notifications = userIds.map((userId) => ({
+  //         userId,
+  //         title: notification.title,
+  //         body: notification.body,
+  //         data: data,
+  //       }));
+
+  //       await Notification.insertMany(notifications);
+  //     }
+
+  //     // Remove failed tokens from users
+  //     const updatePromises = Object.entries(failureMap).map(
+  //       ([userId, tokens]) => {
+  //         return User.findByIdAndUpdate(userId, {
+  //           $pull: { fcm_tokens: { $in: tokens } },
+  //         });
+  //       },
+  //     );
+
+  //     if (updatePromises.length > 0) {
+  //       await Promise.all(updatePromises);
+  //     }
+
+  //     return {
+  //       success: true,
+  //       successCount: successCount,
+  //       failureCount: failureCount,
+  //     };
+  //   } catch (error) {
+  //     console.error('FCM bulk send error:', error);
+  //     return {
+  //       success: false,
+  //       error: error.message,
+  //     };
+  //   }
+  // },
 };
 
 module.exports = fcmService;
