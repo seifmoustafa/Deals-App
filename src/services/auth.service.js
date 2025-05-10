@@ -161,34 +161,67 @@ class AuthService {
   }
 
   async handleOAuthSignIn(token) {
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
-      const { uid, email, name, picture, firebase , phone_number} = decodedToken;
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const { uid, email, name, picture, firebase, phone_number } = decodedToken;
 
-      let user = await User.findOne({ firebase_uid: uid });
+    let user = await User.findOne({ firebase_uid: uid });
 
-      if (firebase.sign_in_provider === 'password' && !user.is_active) {
-        throw new Error('Email not verified');
-      }
-
-      if (!user) {
-        user = new User({
-          full_name: name,
-          email,
-          firebase_uid: uid,
-          profile_image: { url: picture },
-          is_active: true,
-          phone: phone_number || null,
-        //  phone: null,
-        });
-        await user.save();
-      }
-
-      return user.toPublicJSON();
-    } catch (error) {
-      throw new Error(error.message);
+    // If user doesn't exist, create one
+    if (!user) {
+      user = new User({
+        full_name: name,
+        email,
+        firebase_uid: uid,
+        profile_image: { url: picture },
+        is_active: true,
+        phone: phone_number || null,
+      });
+      await user.save();
     }
+
+    // Now safely check firebase provider and user status
+    if (firebase?.sign_in_provider === 'password' && !user.is_active) {
+      throw new Error('Email not verified');
+    }
+
+    return user.toPublicJSON();
+  } catch (error) {
+    console.error('OAuth SignIn error:', error);
+    throw new Error(error.message || 'OAuth Sign-in failed');
   }
+}
+
+
+  // async handleOAuthSignIn(token) {
+  //   try {
+  //     const decodedToken = await admin.auth().verifyIdToken(token);
+  //     const { uid, email, name, picture, firebase , phone_number} = decodedToken;
+
+  //     let user = await User.findOne({ firebase_uid: uid });
+
+  //     if (firebase.sign_in_provider === 'password' && !user.is_active) {
+  //       throw new Error('Email not verified');
+  //     }
+
+  //     if (!user) {
+  //       user = new User({
+  //         full_name: name,
+  //         email,
+  //         firebase_uid: uid,
+  //         profile_image: { url: picture },
+  //         is_active: true,
+  //         phone: phone_number || null,
+  //       //  phone: null,
+  //       });
+  //       await user.save();
+  //     }
+
+  //     return user.toPublicJSON();
+  //   } catch (error) {
+  //     throw new Error(error.message);
+  //   }
+  // }
 
   async resendOTP(email) {
     const user = await User.findOne({ email });
