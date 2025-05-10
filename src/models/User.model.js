@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: false,
       trim: true,
-      required: true,
+      required: false,
       sparse: true,
     },
     data_of_birth: {
