@@ -85,7 +85,7 @@ const controller = {
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(401).json({ message: 'Invalid Firebase ID token' });
+      res.status(401).json({ message: 'Email not verified' });
     }
 
     //   res.json(user);
