@@ -47,7 +47,8 @@ const controller = {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
       if (!user.is_active) {
-        return res.status(403).json({ message: 'User is inactive' });
+       // return res.status(403).json({ message: 'User is inactive' });
+        return res.status(403).json({ message: 'Email not verified' });
       }
 
       const token = generateToken(user)

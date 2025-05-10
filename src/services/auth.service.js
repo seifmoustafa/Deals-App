@@ -114,8 +114,8 @@ class AuthService {
       });
 
       await user.save();
-
-      return { userId: user._id, email: user.email };
+      return { firebase_uid: firebaseUser.uid, email: user.email };
+     // return { userId: user._id, email: user.email };
     } catch (error) {
       if (error.uid) {
         await admin.auth().deleteUser(error.uid);
