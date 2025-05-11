@@ -10,8 +10,9 @@ router.get('/:firebase_uid',authenticateJwt, controller.getById);
 
 router.post('/',authenticateJwt, controller.create);
 
-//router.patch('/:firebase_uid',authenticateJwt, controller.update);
-router.patch('/:firebase_uid', controller.update);
+router.patch('/:firebase_uid',authenticateJwt, controller.update);
+
+router.patch('/:firebase_uid', controller.updateAfterRegister);
 
 
 router.delete('/:firebase_uid',authenticateJwt, controller.delete);

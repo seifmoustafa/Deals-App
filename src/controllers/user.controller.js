@@ -84,6 +84,29 @@ const controller = {
     }
   },
 
+  // To complete user profile data after registeration
+   async updateAfterRegister(req, res) {
+    try {
+      const { firebase_uid } = req.params;
+      const user = await User.findOne({firebase_uid});
+     // const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      Object.keys(req.body).forEach((key) => {
+        if (user[key] !== undefined) {
+          user[key] = req.body[key];
+        }
+      });
+
+      const updatedUser = await user.save();
+      res.json(updatedUser.toPublicJSON());
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
   delete: async (req, res) => {
     try {
       const { firebase_uid } = req.params;
