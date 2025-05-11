@@ -1,20 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/user.controller');
-const authenticateJwt = require('../middlewares/authorization.middleware');
+const hybridAuth = require('../middlewares/hybridAuth.middleware');
 
 
-router.get('/',authenticateJwt, controller.getAll);
+router.get('/',hybridAuth, controller.getAll);
 
-router.get('/:firebase_uid',authenticateJwt, controller.getById);
+router.get('/:firebase_uid',hybridAuth, controller.getById);
 
-router.post('/',authenticateJwt, controller.create);
+router.post('/',hybridAuth, controller.create);
 
-router.patch('/:firebase_uid',authenticateJwt, controller.update);
+router.patch('/:firebase_uid',hybridAuth, controller.update);
 
 router.patch('/:firebase_uid', controller.updateAfterRegister);
 
 
-router.delete('/:firebase_uid',authenticateJwt, controller.delete);
+router.delete('/:firebase_uid',hybridAuth, controller.delete);
 
 module.exports = router;

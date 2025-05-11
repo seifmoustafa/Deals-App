@@ -1,25 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/notification.controller');
-const authenticateJwt = require('../middlewares/authorization.middleware');
+const hybridAuth = require('../middlewares/hybridAuth.middleware');
 
 
-router.post('/allow',authenticateJwt, controller.allow);
+router.post('/allow',hybridAuth, controller.allow);
 
-router.post('/prevent',authenticateJwt, controller.prevent);
+router.post('/prevent',hybridAuth, controller.prevent);
 
-router.get('/:firebase_uid',authenticateJwt, controller.get);
+router.get('/:firebase_uid',hybridAuth, controller.get);
 
-router.patch('/read',authenticateJwt, controller.read);
+router.patch('/read',hybridAuth, controller.read);
 
-router.post('/send',authenticateJwt, controller.sendNotification);
+router.post('/send',hybridAuth, controller.sendNotification);
 
-router.post('/send-store-to-users',authenticateJwt, controller.sendStoreToFirebaseUids);
+router.post('/send-store-to-users',hybridAuth, controller.sendStoreToFirebaseUids);
 
-router.post('/send-store-to-all',authenticateJwt, controller.sendStoreToAllUsers);
+router.post('/send-store-to-all',hybridAuth, controller.sendStoreToAllUsers);
 
-router.post('/send-coupon-to-users',authenticateJwt, controller.sendCouponToFirebaseUids);
+router.post('/send-coupon-to-users',hybridAuth, controller.sendCouponToFirebaseUids);
 
-router.post('/send-coupon-to-all',authenticateJwt, controller.sendCouponToAllUsers);
+router.post('/send-coupon-to-all',hybridAuth, controller.sendCouponToAllUsers);
 
 module.exports = router;

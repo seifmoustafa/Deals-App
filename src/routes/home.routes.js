@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/home.controller');
-const authenticateJwt = require('../middlewares/authorization.middleware');
+const hybridAuth = require('../middlewares/hybridAuth.middleware');
 
 
-router.get('/mobile',authenticateJwt, controller.mobile);
+router.get('/mobile',hybridAuth, controller.mobile);
 
 module.exports = router;

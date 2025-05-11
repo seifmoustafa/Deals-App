@@ -2,17 +2,17 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/store.controller');
 const Store = require('../models/Store.model');
-const authenticateJwt = require('../middlewares/authorization.middleware');
+const hybridAuth = require('../middlewares/hybridAuth.middleware');
 
 
-router.get('/',authenticateJwt, controller.getAll);
+router.get('/',hybridAuth, controller.getAll);
 
-router.get('/:id',authenticateJwt, controller.getSingle);
+router.get('/:id',hybridAuth, controller.getSingle);
 
-router.post('/',authenticateJwt, controller.create);
+router.post('/',hybridAuth, controller.create);
 
-router.patch('/:id',authenticateJwt, controller.update);
+router.patch('/:id',hybridAuth, controller.update);
 
-router.delete('/:id',authenticateJwt, controller.delete);
+router.delete('/:id',hybridAuth, controller.delete);
 
 module.exports = router;
