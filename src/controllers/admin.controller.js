@@ -4,9 +4,9 @@ const jwt = require('jsonwebtoken');
 const controller = {
   register: async (req, res) => {
     try {
-      const { full_name, email, password, role } = req.body;
+      const { full_name,username, email, password, role } = req.body;
 
-      const admin = new Admin({ full_name, email, password, role });
+      const admin = new Admin({ full_name, username, email, password, role });
 
       await admin.save();
 
@@ -18,9 +18,12 @@ const controller = {
 
   login: async (req, res) => {
     try {
-      const { email, password } = req.body;
+     // const { email, password } = req.body;
+     const { username, password } = req.body;
 
-      const admin = await Admin.findOne({ email }).select('+password');
+
+     // const admin = await Admin.findOne({ email }).select('+password');
+      const admin = await Admin.findOne({ username }).select('+password');
       if (!admin) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
@@ -53,13 +56,24 @@ const controller = {
       const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
       const sort = { [sortField]: sortOrder };
 
-      const admins = await Admin.find()
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        //.lean();
+      const search = req.query.search || '';
+      const searchRegex = new RegExp(search, 'i');
 
-      const totalAdmins = await Admin.countDocuments();
+      const filter = {
+      $or: [
+        { full_name: searchRegex },
+        { email: searchRegex },
+        { username: searchRegex },
+      ],
+    };
+
+      const admins = await Admin.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
+      //const totalAdmins = await Admin.countDocuments();
+       const totalAdmins = await Admin.countDocuments(filter);
       const totalPages = Math.ceil(totalAdmins / limit);
       res.json({
         data: admins.map((admin) => admin.toPublicJSON()),
@@ -79,8 +93,10 @@ const controller = {
   updateRole: async (req, res) => {
     try {
       const { id, role } = req.body;
+      console.log(req.body);
 
       const admin = await Admin.findById(id);
+      console.log(admin);
       if (!admin) {
         return res.status(404).json({ message: 'Admin not found' });
       }
@@ -93,6 +109,114 @@ const controller = {
       res.status(400).json({ message: error.message });
     }
   },
+
+   activateAdmin: async (req, res) => {
+    try {
+      const { id } = req.query;
+      console.log(req.query);
+
+      const admin = await Admin.findById(id);
+      console.log(admin);
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin not found' });
+      }
+
+      admin.is_active = true;
+      await admin.save();
+
+      res.json({ message: 'Admin Activated successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+    inActivateAdmin: async (req, res) => {
+    try {
+      const { id } = req.query;
+      console.log(req.query);
+
+      const admin = await Admin.findById(id);
+      console.log(admin);
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin not found' });
+      }
+
+      admin.is_active = false;
+      await admin.save();
+
+      res.json({ message: 'Admin InActivated successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+    deleteAdmin: async (req, res) => {
+    try {
+      const { id } = req.query;
+      console.log(req.query);
+
+      const admin = await Admin.findById(id);
+      console.log(admin);
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin not found' });
+      }
+
+      await admin.deleteOne();
+      res.json({ message: 'Admin deleted successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+   changeEmail: async (req, res) => {
+    try {
+      const { id , currentPassword , newEmail } = req.body;
+      console.log(req.body);
+
+      const admin = await Admin.findById(id).select('+password');;
+      console.log(admin);
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin not found' });
+      }
+
+       const isPasswordValid = await admin.comparePassword(currentPassword);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      admin.email = newEmail;
+      await admin.save();
+      res.json({ message: 'Email changed successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+   changePassword: async (req, res) => {
+    try {
+      const { id , currentPassword , newPassword } = req.body;
+      console.log(req.body);
+
+      const admin = await Admin.findById(id).select('+password');;
+      console.log(admin);
+      if (!admin) {
+        return res.status(404).json({ message: 'Admin not found' });
+      }
+
+       const isPasswordValid = await admin.comparePassword(currentPassword);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      admin.password = newPassword;
+      await admin.save();
+      res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+
 };
 
 module.exports = controller;

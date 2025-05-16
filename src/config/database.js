@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
+const { seedSuperAdmin } = require('../DBSeeder/Seeder');
+
 
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI);
-
+     await seedSuperAdmin(); // Seeding DB with superadmin
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 
     // Handle connection events
