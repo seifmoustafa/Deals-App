@@ -12,7 +12,7 @@ router.post('/',hybridAuth, controller.create);
 
 router.patch('/:firebase_uid',hybridAuth, controller.update);
 
-router.patch('/:firebase_uid', controller.updateAfterRegister);
+router.patch('/updateAfterRegister/:firebase_uid', controller.updateAfterRegister);
 
 
 router.delete('/:firebase_uid',hybridAuth, controller.delete);
