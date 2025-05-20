@@ -1,5 +1,7 @@
 const User = require('../models/User.model');
 const authService = require('../services/auth.service');
+const admin = require('firebase-admin');
+
 
 const controller = {
   async getAll(req, res) {
@@ -12,9 +14,20 @@ const controller = {
       const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
       const sort = { [sortField]: sortOrder };
 
-      const users = await User.find().sort(sort).skip(skip).limit(limit);
+      const search = req.query.search || '';
+      const searchRegex = new RegExp(search, 'i');
 
-      const totalUsers = await User.countDocuments();
+      const filter = {
+      $or: [
+        { full_name: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ],
+    };
+
+      const users = await User.find(filter).sort(sort).skip(skip).limit(limit);
+
+      const totalUsers = await User.countDocuments(filter);
       const totalPages = Math.ceil(totalUsers / limit);
       res.json({
         data: users.map((user) => user.toPublicJSON()),
@@ -45,22 +58,60 @@ const controller = {
     }
   },
 
-  async create(req, res) {
-    const user = new User({
-      full_name: req.body.full_name,
-      email: req.body.email,
-      phone: req.body.phone,
-      password: req.body.password, // Note: Should be hashed before saving
-      profile_image: req.body.profile_image,
+async create(req, res) {
+  const {
+    full_name,
+    email,
+    phone,
+    password,
+    profile_image,
+  } = req.body;
+
+  try {
+    // 1. Create user in Firebase Auth
+    const firebaseUser = await admin.auth().createUser({
+      email,
+      password,
+      displayName: full_name,
+      ...(phone && /^\+?[1-9]\d{7,14}$/.test(phone) && { phoneNumber: phone.startsWith('+') ? phone : `+${phone}` }),
+      //phoneNumber: phone ? `+${phone}` : undefined, // optional
     });
 
-    try {
-      const newUser = await user.save();
-      res.status(201).json(newUser.toPublicJSON());
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  },
+    // 2. Save user in MongoDB
+    const user = new User({
+      full_name,
+      email,
+      phone,
+      password, // Will be hashed via mongoose pre-save
+      profile_image,
+      firebase_uid: firebaseUser.uid,
+    });
+
+    const newUser = await user.save();
+    res.status(201).json(newUser.toPublicJSON());
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(400).json({ message: error.message });
+  }
+},
+
+
+  // async create(req, res) {
+  //   const user = new User({
+  //     full_name: req.body.full_name,
+  //     email: req.body.email,
+  //     phone: req.body.phone,
+  //     password: req.body.password, // Note: Should be hashed before saving
+  //     profile_image: req.body.profile_image,
+  //   });
+
+  //   try {
+  //     const newUser = await user.save();
+  //     res.status(201).json(newUser.toPublicJSON());
+  //   } catch (error) {
+  //     res.status(400).json({ message: error.message });
+  //   }
+  // },
 
   async update(req, res) {
     try {
@@ -107,6 +158,31 @@ const controller = {
     }
   },
 
+  // For Update User from Dashboard
+    async updateUser(req, res) {
+    try {
+      const { id } = req.params;
+      const user = await User.findById(id);
+      console.log(id);
+      console.log(user);
+     // const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      Object.keys(req.body).forEach((key) => {
+        if (user[key] !== undefined) {
+          user[key] = req.body[key];
+        }
+      });
+
+      const updatedUser = await user.save();
+      res.json(updatedUser.toPublicJSON());
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
   delete: async (req, res) => {
     try {
       const { firebase_uid } = req.params;
@@ -116,6 +192,127 @@ const controller = {
       res.status(500).json({ message: error.message });
     }
   },
+
+   deleteAllUsers: async (req, res) => {
+     try {
+    const users = await User.find({});
+    for (const user of users) {
+      await authService.deleteAccount(user.firebase_uid);
+    }
+
+     // Delete all user documents from MongoDB
+    const result = await User.deleteMany({});
+    
+    res.status(200).json({ message: `🗑️ All users deleted`, deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+deleteSelectedUsers: async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: 'userIds must be a non-empty array' });
+    }
+
+    // First delete accounts from external auth service
+    const users = await User.find({ _id: { $in: userIds } });
+
+    for (const user of users) {
+      if (user.firebase_uid) {
+        await authService.deleteAccount(user.firebase_uid);
+      }
+    }
+
+    // Then delete from MongoDB
+    const result = await User.deleteMany({ _id: { $in: userIds } });
+
+    res.status(200).json({
+      message: `🗑️ Selected users deleted`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+
+inActivateAllUsers: async (req, res) => {
+   try {
+    const users = await User.find({});
+
+    for (const user of users) {
+      user.is_active = false;
+      await user.save(); // ✅ Save each user instance
+    }
+
+    res.status(200).json({ message: `🔒 All users deactivated successfully` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+inActivateSelectedUsers: async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: 'userIds must be a non-empty array' });
+    }
+
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      { $set: { is_active: false } }
+    );
+
+    res.status(200).json({
+      message: `🔒 Selected users deactivated successfully`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+ActivateAllUsers: async (req, res) => {
+  try {
+    const users = await User.find({});
+
+    for (const user of users) {
+      user.is_active = true;
+      await user.save(); // ✅ Save each user instance
+    }
+
+    res.status(200).json({ message: `🔒 All users activated successfully` });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+ActivateSelectedUsers: async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ message: 'userIds must be a non-empty array' });
+    }
+
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      { $set: { is_active: true } }
+    );
+
+    res.status(200).json({
+      message: `🔒 Selected users activated successfully`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
 };
 
 module.exports = controller;
