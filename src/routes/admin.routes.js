@@ -14,9 +14,15 @@ router.get('/', authenticateAdmin, authorizeRole('super'), controller.getAll);
 
 router.patch('/activate-admin', authenticateAdmin, authorizeRole('super'), controller.activateAdmin);
 
+router.patch('/activate-selectedAdmin', authenticateAdmin, authorizeRole('super'), controller.ActivateSelectedAdmins);
+
 router.patch('/inactivate-admin', authenticateAdmin, authorizeRole('super'), controller.inActivateAdmin);
 
+router.patch('/inactivate-selectedAdmin', authenticateAdmin, authorizeRole('super'), controller.inActivateSelectedAdmins);
+
 router.delete('/delete-admin', authenticateAdmin, authorizeRole('super'), controller.deleteAdmin);
+
+router.delete('/delete-selectedAdmin', authenticateAdmin, authorizeRole('super'), controller.deleteSelectedAdmins);
 
 router.patch('/change-email', authenticateAdmin, controller.changeEmail);
 

@@ -59,13 +59,25 @@ const controller = {
       const search = req.query.search || '';
       const searchRegex = new RegExp(search, 'i');
 
+      const isActive = req.query.is_active;
+
       const filter = {
-      $or: [
+      $and: [
+        {
+          $or: [
         { full_name: searchRegex },
         { email: searchRegex },
         { username: searchRegex },
+       ],
+        },
       ],
     };
+
+     // Optional filter: active/inactive
+    if (isActive === 'true' || isActive === 'false') {
+      filter.$and.push({ is_active: isActive === 'true' });
+    }
+
 
       const admins = await Admin.find(filter)
       .sort(sort)
@@ -130,6 +142,29 @@ const controller = {
     }
   },
 
+  ActivateSelectedAdmins: async (req, res) => {
+    try {
+      const { adminIds } = req.body;
+  
+      if (!Array.isArray(adminIds) || adminIds.length === 0) {
+        return res.status(400).json({ message: 'adminIds must be a non-empty array' });
+      }
+  
+      const result = await Admin.updateMany(
+        { _id: { $in: adminIds } },
+        { $set: { is_active: true } }
+      );
+  
+      res.status(200).json({
+        message: `🔒 Selected Admins activated successfully`,
+        modifiedCount: result.modifiedCount
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+
     inActivateAdmin: async (req, res) => {
     try {
       const { id } = req.query;
@@ -150,6 +185,28 @@ const controller = {
     }
   },
 
+    inActivateSelectedAdmins: async (req, res) => {
+    try {
+      const { adminIds } = req.body;
+  
+      if (!Array.isArray(adminIds) || adminIds.length === 0) {
+        return res.status(400).json({ message: 'adminIds must be a non-empty array' });
+      }
+  
+      const result = await Admin.updateMany(
+        { _id: { $in: adminIds } },
+        { $set: { is_active: false } }
+      );
+  
+      res.status(200).json({
+        message: `🔒 Selected Admins deactivated successfully`,
+        modifiedCount: result.modifiedCount
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
     deleteAdmin: async (req, res) => {
     try {
       const { id } = req.query;
@@ -165,6 +222,30 @@ const controller = {
       res.json({ message: 'Admin deleted successfully' });
     } catch (error) {
       res.status(400).json({ message: error.message });
+    }
+  },
+
+  deleteSelectedAdmins: async (req, res) => {
+    try {
+      const { adminIds } = req.body;
+  
+      if (!Array.isArray(adminIds) || adminIds.length === 0) {
+        return res.status(400).json({ message: 'adminIds must be a non-empty array' });
+      }
+  
+      // First delete accounts from external auth service
+      const admins = await Admin.find({ _id: { $in: adminIds } });
+  
+  
+      // Then delete from MongoDB
+      const result = await Admin.deleteMany({ _id: { $in: adminIds } });
+  
+      res.status(200).json({
+        message: `🗑️ Selected admins deleted`,
+        deletedCount: result.deletedCount
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 
