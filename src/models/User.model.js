@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
       required: false,
       sparse: true,
     },
-    data_of_birth: {
+    date_of_birth: {
       type: Date,
       default: null,
     },

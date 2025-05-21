@@ -63,6 +63,10 @@ async create(req, res) {
     full_name,
     email,
     phone,
+    date_of_birth,
+    gender,
+    country,
+    city,
     password,
     profile_image,
   } = req.body;
@@ -82,6 +86,10 @@ async create(req, res) {
       full_name,
       email,
       phone,
+      date_of_birth,
+      gender,
+      country,
+      city,
       password, // Will be hashed via mongoose pre-save
       profile_image,
       firebase_uid: firebaseUser.uid,
@@ -184,13 +192,24 @@ async create(req, res) {
   },
 
   delete: async (req, res) => {
-    try {
-      const { firebase_uid } = req.params;
-      const result = await authService.deleteAccount(firebase_uid);
-      res.status(200).json(result);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+   try {
+    const { firebase_uid } = req.params;
+    const user = await User.findOne({ firebase_uid });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    // Delete user account from Firebase
+    const result = await authService.deleteAccount(firebase_uid);
+
+    // Delete user data from MongoDB
+    await User.deleteOne({ firebase_uid });
+
+    res.status(200).json({ message: 'User deleted successfully', result });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
   },
 
    deleteAllUsers: async (req, res) => {
