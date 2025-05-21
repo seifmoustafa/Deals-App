@@ -11,12 +11,40 @@ const controller = {
       const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
       const sort = { [sortField]: sortOrder };
 
-      const categories = await Category.find()
+      const search = req.query.search || '';
+      const searchRegex = new RegExp(search, 'i');
+
+      const isActive = req.query.is_active;
+      const isFeatured = req.query.is_featured;
+
+
+    const filter = {
+      $and: [
+        {
+          $or: [
+            { title: searchRegex },
+            { description: searchRegex },
+            { slug: searchRegex },
+          ],
+        },
+      ],
+    };
+
+       // Optional filter: active/inactive
+    if (isActive === 'true' || isActive === 'false') {
+      filter.$and.push({ is_active: isActive === 'true' });
+    }
+
+    if (isFeatured === 'true' || isFeatured === 'false') {
+      filter.$and.push({ is_featured: isFeatured === 'true' });
+    }
+
+      const categories = await Category.find(filter)
         .sort(sort)
         .skip(skip)
         .limit(limit);
 
-      const totalCategories = await Category.countDocuments();
+      const totalCategories = await Category.countDocuments(filter);
       const totalPages = Math.ceil(totalCategories / limit);
       res.json({
         data: categories,
@@ -90,12 +118,116 @@ const controller = {
         return res.status(404).json({ message: 'Category not found' });
       }
 
-      await category.remove();
+      await category.deleteOne();
       res.json({ message: 'Category deleted successfully' });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
+
+  deleteSelectedCategories: async (req, res) => {
+    try {
+      const { categoryIds } = req.body;
+  
+      if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+        return res.status(400).json({ message: 'categoryIds must be a non-empty array' });
+      }
+    
+      // Then delete from MongoDB
+      const result = await Category.deleteMany({ _id: { $in: categoryIds } });
+  
+      res.status(200).json({
+        message: `🗑️ Selected Categories deleted`,
+        deletedCount: result.deletedCount
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+     activateCategory: async (req, res) => {
+      try {
+        const { id } = req.query;
+        console.log(req.query);
+  
+        const category = await Category.findById(id);
+        if (!category) {
+          return res.status(404).json({ message: 'category not found' });
+        }
+  
+        category.is_active = true;
+        await category.save();
+  
+        res.json({ message: 'Category Activated successfully' });
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    },
+
+  ActivateSelectedCategories: async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({ message: 'categoryIds must be a non-empty array' });
+    }
+
+    const result = await Category.updateMany(
+      { _id: { $in: categoryIds } },
+      { $set: { is_active: true } }
+    );
+
+    res.status(200).json({
+      message: `🔒 Selected Categories activated successfully`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+  inactivateCategory: async (req, res) => {
+      try {
+        const { id } = req.query;
+        console.log(req.query);
+  
+        const category = await Category.findById(id);
+        if (!category) {
+          return res.status(404).json({ message: 'category not found' });
+        }
+  
+        category.is_active = false;
+        await category.save();
+  
+        res.json({ message: 'Category deactivated  successfully' });
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    },
+
+  inActivateSelectedCategories: async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({ message: 'categoryIds must be a non-empty array' });
+    }
+
+    const result = await Category.updateMany(
+      { _id: { $in: categoryIds } },
+      { $set: { is_active: false } }
+    );
+
+    res.status(200).json({
+      message: `🔒 Selected Categories deactivated successfully`,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+
 };
 
 module.exports = controller;

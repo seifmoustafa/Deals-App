@@ -90,8 +90,9 @@ const controller = {
   },
 
   delete: async (req, res) => {
+    const { id } = req.params.id;
     try {
-      const result = await Store.softDelete(req.params.id);
+      const result = await Store.deleteOne(id);
       if (!result) {
         return res.status(404).json({ message: 'Store not found' });
       }
@@ -100,6 +101,111 @@ const controller = {
       res.status(500).json({ message: error.message });
     }
   },
+
+    deleteSelectedStores: async (req, res) => {
+     try {
+      const { storeIds } = req.body;
+  
+      if (!Array.isArray(storeIds) || storeIds.length === 0) {
+        return res.status(400).json({ message: 'storeIds must be a non-empty array' });
+      }
+    
+      // Then delete from MongoDB
+      const result = await Store.deleteMany({ _id: { $in: storeIds } });
+  
+      res.status(200).json({
+        message: `🗑️ Selected Stores deleted`,
+        deletedCount: result.deletedCount
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+
+activateStore: async (req, res) => {
+        try {
+          const { id } = req.query;
+          console.log(req.query);
+    
+          const store = await Store.findById(id);
+          if (!store) {
+            return res.status(404).json({ message: 'store not found' });
+          }
+    
+          store.is_active = true;
+          await store.save();
+    
+          res.json({ message: 'store Activated successfully' });
+        } catch (error) {
+          res.status(400).json({ message: error.message });
+        }
+      },
+
+inactivateStore: async (req, res) => {
+        try {
+          const { id } = req.query;
+          console.log(req.query);
+    
+          const store = await Store.findById(id);
+          if (!store) {
+            return res.status(404).json({ message: 'store not found' });
+          }
+    
+          store.is_active = false;
+          await store.save();
+    
+          res.json({ message: 'store deactivated successfully' });
+        } catch (error) {
+          res.status(400).json({ message: error.message });
+        }
+      },
+
+ActivateSelectedStores: async (req, res) => {
+        try {
+          const { storeIds } = req.body;
+      
+          if (!Array.isArray(storeIds) || storeIds.length === 0) {
+            return res.status(400).json({ message: 'storeIds must be a non-empty array' });
+          }
+      
+          const result = await Store.updateMany(
+            { _id: { $in: storeIds } },
+            { $set: { is_active: true } }
+          );
+      
+          res.status(200).json({
+            message: `🔒 Selected Stores activated successfully`,
+            modifiedCount: result.modifiedCount
+          });
+        } catch (error) {
+          res.status(500).json({ message: error.message });
+        }
+      },
+
+
+inActivateSelectedStores: async (req, res) => {
+        try {
+          const { storeIds } = req.body;
+      
+          if (!Array.isArray(storeIds) || storeIds.length === 0) {
+            return res.status(400).json({ message: 'storeIds must be a non-empty array' });
+          }
+      
+          const result = await Store.updateMany(
+            { _id: { $in: storeIds } },
+            { $set: { is_active: false } }
+          );
+      
+          res.status(200).json({
+            message: `🔒 Selected Stores deactivated successfully`,
+            modifiedCount: result.modifiedCount
+          });
+        } catch (error) {
+          res.status(500).json({ message: error.message });
+        }
+      },
+
 };
 
 module.exports = controller;

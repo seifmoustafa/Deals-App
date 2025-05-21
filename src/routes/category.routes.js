@@ -2,27 +2,39 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/category.controller');
 const hybridAuth = require('../middlewares/hybridAuth.middleware');
-const authorizeAdminOnly = require('../middlewares/authorizeAdminOnly.middleware');
+const {
+  authenticateAdmin,
+  authorizeRole,
+} = require('../middlewares/admin.middleware');
 
 
+router.patch('/activate-category', authenticateAdmin, authorizeRole(`super`,`regular`), controller.activateCategory);
+
+router.patch('/inactivate-category', authenticateAdmin, authorizeRole(`super`,`regular`), controller.inactivateCategory);
+
+router.patch('/activate-selectedCategory',authenticateAdmin, authorizeRole(`super`,`regular`), controller.ActivateSelectedCategories);
+
+router.patch('/inactivate-selectedCategory',authenticateAdmin, authorizeRole(`super`,`regular`), controller.inActivateSelectedCategories);
+
+router.delete('/delete-selectedCategory', authenticateAdmin, authorizeRole(`super`,`regular`), controller.deleteSelectedCategories);
 
 
 // Get all categories
-//router.get('/', authenticateJwt ,controller.getAll);
 router.get('/', hybridAuth ,controller.getAll);
 
 // Get single category
-//router.get('/:id', controller.getSingle);
 router.get('/:id',hybridAuth, controller.getSingle);
 
 
 // Create category
-router.post('/',hybridAuth, controller.create);
+router.post('/',authenticateAdmin, authorizeRole(`super`,`regular`), controller.create);
 
 // Update category
-router.patch('/:id',hybridAuth, controller.update);
+router.patch('/:id',authenticateAdmin, authorizeRole(`super`,`regular`), controller.update);
 
 // Delete category (soft delete)
-router.delete('/:id',hybridAuth, controller.delete);
+router.delete('/:id',authenticateAdmin, authorizeRole(`super`,`regular`), controller.delete);
+
+
 
 module.exports = router;
