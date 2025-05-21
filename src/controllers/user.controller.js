@@ -17,16 +17,34 @@ const controller = {
       const search = req.query.search || '';
       const searchRegex = new RegExp(search, 'i');
 
-      const filter = {
-      $or: [
-        { full_name: searchRegex },
-        { email: searchRegex },
-        { phone: searchRegex },
+      const isActive = req.query.is_active;
+      const gender = req.query.gender;
+
+    const filter = {
+      $and: [
+        {
+          $or: [
+            { full_name: searchRegex },
+            { email: searchRegex },
+            { phone: searchRegex },
+            { country: searchRegex },
+            { city: searchRegex },
+          ],
+        },
       ],
     };
 
-      const users = await User.find(filter).sort(sort).skip(skip).limit(limit);
+      // Optional filter: active/inactive
+    if (isActive === 'true' || isActive === 'false') {
+      filter.$and.push({ is_active: isActive === 'true' });
+    }
 
+    // Optional filter: gender
+    if (['male', 'female', 'other'].includes(gender)) {
+      filter.$and.push({ gender });
+    }
+
+      const users = await User.find(filter).sort(sort).skip(skip).limit(limit);
       const totalUsers = await User.countDocuments(filter);
       const totalPages = Math.ceil(totalUsers / limit);
       res.json({
@@ -206,7 +224,7 @@ async create(req, res) {
     // Delete user data from MongoDB
     await User.deleteOne({ firebase_uid });
 
-    res.status(200).json({ message: 'User deleted successfully', result });
+    res.status(200).json({ message: 'User deleted successfully'});
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
