@@ -102,6 +102,32 @@ const controller = {
     }
   },
 
+ updateAdmin : async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Prevent certain fields from being updated directly
+    const forbiddenFields = ['password', '_id', 'createdAt', 'updatedAt', 'deleted_at'];
+    forbiddenFields.forEach(field => delete updates[field]);
+
+    const admin = await Admin.findById(id);
+    if (!admin || admin.deleted_at) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    // Update allowed fields
+    Object.keys(updates).forEach(key => {
+      admin[key] = updates[key];
+    });
+
+    await admin.save();
+    res.json({ message: 'Admin updated successfully', admin: admin.toPublicJSON() });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
   updateRole: async (req, res) => {
     try {
       const { id, role } = req.body;

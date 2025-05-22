@@ -28,6 +28,8 @@ router.patch('/change-email', authenticateAdmin, controller.changeEmail);
 
 router.patch('/change-password', authenticateAdmin, controller.changePassword);
 
+router.patch('/update-admin/:id', authenticateAdmin,authorizeRole('super','regular'),controller.updateAdmin);
+
 
 
 router.patch(
