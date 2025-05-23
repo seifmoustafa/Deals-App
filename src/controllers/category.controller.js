@@ -44,10 +44,17 @@ const controller = {
         .skip(skip)
         .limit(limit);
 
+        await Promise.all(categories.map((cat) => cat.updateStats()));
+
+      const refreshedCategories = await Category.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
+
       const totalCategories = await Category.countDocuments(filter);
       const totalPages = Math.ceil(totalCategories / limit);
       res.json({
-        data: categories,
+        data: refreshedCategories,
         pagination: {
           currentPage: page,
           totalPages,

@@ -38,6 +38,59 @@ const controller = {
     }
   },
 
+
+  getStoresByCategoryId : async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const sortField = req.query.sortField || 'createdAt';
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+    const sort = { [sortField]: sortOrder };
+
+    const isActive = req.query.is_active;
+    const isFeatured = req.query.is_featured;
+
+    const filter = {
+      category: categoryId,
+      deleted_at: null,
+    };
+
+    if (isActive === 'true' || isActive === 'false') {
+      filter.is_active = isActive === 'true';
+    }
+
+    if (isFeatured === 'true' || isFeatured === 'false') {
+      filter.is_featured = isFeatured === 'true';
+    }
+
+    const stores = await Store.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate('category', 'title slug');
+
+    const totalStores = await Store.countDocuments(filter);
+    const totalPages = Math.ceil(totalStores / limit);
+
+    res.json({
+      data: stores,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalStores,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
   getSingle: async (req, res) => {
     try {
       const store = await Store.findById(req.params.id).populate('category');

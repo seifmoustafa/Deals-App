@@ -24,6 +24,8 @@ router.delete('/delete-selectedStore', authenticateAdmin, authorizeRole(`super`,
 
 router.get('/',hybridAuth, controller.getAll);
 
+router.get('/stores-bycategoryId/:categoryId',hybridAuth, controller.getStoresByCategoryId);
+
 router.get('/:id',hybridAuth, controller.getSingle);
 
 router.post('/',authenticateAdmin, authorizeRole(`super`,`regular`), controller.create);
