@@ -51,6 +51,8 @@ const controller = {
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
     const sort = { [sortField]: sortOrder };
 
+    const query = queryBuilder.stores(req.query);
+
     const isActive = req.query.is_active;
     const isFeatured = req.query.is_featured;
 
@@ -67,13 +69,13 @@ const controller = {
       filter.is_featured = isFeatured === 'true';
     }
 
-    const stores = await Store.find(filter)
+    const stores = await Store.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .populate('category', 'title slug');
 
-    const totalStores = await Store.countDocuments(filter);
+    const totalStores = await Store.countDocuments(query);
     const totalPages = Math.ceil(totalStores / limit);
 
     res.json({
