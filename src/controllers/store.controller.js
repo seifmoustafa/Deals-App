@@ -51,29 +51,35 @@ const controller = {
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
     const sort = { [sortField]: sortOrder };
 
-    const query = queryBuilder.stores(req.query);
+
+       const query = {
+      ...queryBuilder.stores(req.query),
+      category: categoryId, // ✅ Force filter by category ID
+      deleted_at: null,
+    };
 
     const isActive = req.query.is_active;
     const isFeatured = req.query.is_featured;
 
-    const filter = {
-      category: categoryId,
-      deleted_at: null,
-    };
 
     if (isActive === 'true' || isActive === 'false') {
-      filter.is_active = isActive === 'true';
+      query.is_active = isActive === 'true';
     }
 
     if (isFeatured === 'true' || isFeatured === 'false') {
-      filter.is_featured = isFeatured === 'true';
+      query.is_featured = isFeatured === 'true';
     }
 
     const stores = await Store.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .populate('category', 'title slug');
+      .populate({
+       path: 'category',
+       select: 'title slug',
+       match: { deleted_at: null }, // 👈 only populate if not soft-deleted
+    });
+      // .populate('category', 'title slug');
 
     const totalStores = await Store.countDocuments(query);
     const totalPages = Math.ceil(totalStores / limit);
