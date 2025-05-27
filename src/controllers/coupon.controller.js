@@ -7,100 +7,170 @@ const Store = require('../models/Store.model');
 
 const controller = {
   getAll: async (req, res) => {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const skip = (page - 1) * limit;
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-      const sortField = req.query.sortField || 'createdAt';
-      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
-      const sort = { [sortField]: sortOrder };
+    const sortField = req.query.sortField || 'createdAt';
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+    const sort = { [sortField]: sortOrder };
 
-      const pipeline = [
-        {
-          $lookup: {
-            from: 'stores',
-            localField: 'store',
-            foreignField: '_id',
-            as: 'store',
-          },
-        },
-        {
-          $unwind: '$store',
-        },
-        ...(req.query.store
-          ? [
-              {
-                $match: {
-                  'store._id': new mongoose.Types.ObjectId(req.query.store),
-                },
-              },
-            ]
-          : []),
-        ...(req.query.category
-          ? [
-              {
-                $match: {
-                  'store.category': new mongoose.Types.ObjectId(
-                    req.query.category,
-                  ),
-                },
-              },
-            ]
-          : []),
-        {
-          $match: queryBuilder.coupons(req.query),
-        },
-        {
-          $sort: sort,
-        },
-        {
-          $skip: skip,
-        },
-        {
-          $limit: limit,
-        },
-        // {
-        //   $project: {
-        //     code: 1,
-        //     'store._id': 1,
-        //     'store.title': 1,
-        //     'store.category': 1,
-        //     title: 1,
-        //     description: 1,
-        //     terms_and_conditions: 1,
-        //     valid_for: 1,
-        //     discount_type: 1,
-        //     discount_value: 1,
-        //     start_date: 1,
-        //     expiry_date: 1,
-        //     createdAt: 1,
-        //   },
-        // },
-      ];
+    // Base match stage
+    const baseMatch = {
+      $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }]
+    };
 
-      const coupons = await Coupon.aggregate(pipeline);
+    // Optional filters
+    const storeFilter = req.query.store && mongoose.Types.ObjectId.isValid(req.query.store)
+      ? { store: new mongoose.Types.ObjectId(req.query.store) }
+      : null;
 
-      const countPipeline = pipeline.slice(0, -3); // Remove skip, limit, and project
-      countPipeline.push({ $count: 'total' });
-      const totalResults = await Coupon.aggregate(countPipeline);
-      const totalCoupons = totalResults[0]?.total || 0;
-      const totalPages = Math.ceil(totalCoupons / limit);
+    const categoryFilter = req.query.category && mongoose.Types.ObjectId.isValid(req.query.category)
+      ? { 'store.category': new mongoose.Types.ObjectId(req.query.category) }
+      : null;
 
-      res.json({
-        data: coupons,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalCoupons,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1,
+    // Main pipeline
+    const pipeline = [
+      { $match: { ...baseMatch, ...(storeFilter || {}) } },
+      {
+        $lookup: {
+          from: 'stores',
+          localField: 'store',
+          foreignField: '_id',
+          as: 'store',
         },
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  },
+      },
+      { $unwind: { path: '$store', preserveNullAndEmptyArrays: true } },
+      ...(categoryFilter ? [{ $match: categoryFilter }] : []),
+      { $sort: sort },
+      { $skip: skip },
+      { $limit: limit },
+    ];
+
+    // Count pipeline (same as main pipeline but without skip/limit)
+    const countPipeline = [
+      { $match: { ...baseMatch, ...(storeFilter || {}) } },
+      {
+        $lookup: {
+          from: 'stores',
+          localField: 'store',
+          foreignField: '_id',
+          as: 'store',
+        },
+      },
+      { $unwind: { path: '$store', preserveNullAndEmptyArrays: true } },
+      ...(categoryFilter ? [{ $match: categoryFilter }] : []),
+      { $count: 'total' }
+    ];
+
+    const [coupons, countResult] = await Promise.all([
+      Coupon.aggregate(pipeline),
+      Coupon.aggregate(countPipeline)
+    ]);
+
+    const totalCoupons = countResult[0]?.total || 0;
+    const totalPages = Math.ceil(totalCoupons / limit);
+
+    res.json({
+      data: coupons,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCoupons,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getAll:', error);
+    res.status(500).json({ message: error.message });
+  }
+},
+
+  // getAll: async (req, res) => {
+  //   try {
+  //     const page = parseInt(req.query.page) || 1;
+  //     const limit = parseInt(req.query.limit) || 10;
+  //     const skip = (page - 1) * limit;
+
+  //     const sortField = req.query.sortField || 'createdAt';
+  //     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+  //     const sort = { [sortField]: sortOrder };
+
+  //     const pipeline = [
+  //   {
+  //   $match: {
+  //     $or: [{ deleted_at: null }, { deleted_at: { $exists: false } }],
+  //   },
+  // },
+  // {
+  //   $lookup: {
+  //     from: 'stores',
+  //     localField: 'store',
+  //     foreignField: '_id',
+  //     as: 'store',
+  //   },
+  // },
+  // { $unwind: '$store' },
+  // ...(req.query.store && mongoose.Types.ObjectId.isValid(req.query.store)
+  //   ? [{
+  //       $match: {
+  //         'store._id': new mongoose.Types.ObjectId(req.query.store),
+  //       },
+  //     }]
+  //   : []),
+  // ...(req.query.category && mongoose.Types.ObjectId.isValid(req.query.category)
+  //   ? [{
+  //       $match: {
+  //         'store.category': new mongoose.Types.ObjectId(req.query.category),
+  //       },
+  //     }]
+  //   : []),
+  // { $sort: sort },
+  // { $skip: skip },
+  // { $limit: limit },
+  //       // {
+  //       //   $project: {
+  //       //     code: 1,
+  //       //     'store._id': 1,
+  //       //     'store.title': 1,
+  //       //     'store.category': 1,
+  //       //     title: 1,
+  //       //     description: 1,
+  //       //     terms_and_conditions: 1,
+  //       //     valid_for: 1,
+  //       //     discount_type: 1,
+  //       //     discount_value: 1,
+  //       //     start_date: 1,
+  //       //     expiry_date: 1,
+  //       //     createdAt: 1,
+  //       //   },
+  //       // },
+  //     ];
+
+  //     const coupons = await Coupon.aggregate(pipeline);
+
+  //     const countPipeline = pipeline.slice(0, -3); // Remove skip, limit, and project
+  //     countPipeline.push({ $count: 'total' });
+  //     const totalResults = await Coupon.aggregate(countPipeline);
+  //     const totalCoupons = totalResults[0]?.total || 0;
+  //     const totalPages = Math.ceil(totalCoupons / limit);
+
+  //     res.json({
+  //       data: coupons,
+  //       pagination: {
+  //         currentPage: page,
+  //         totalPages,
+  //         totalCoupons,
+  //         hasNextPage: page < totalPages,
+  //         hasPrevPage: page > 1,
+  //       },
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({ message: error.message });
+  //   }
+  // },
 
   getSingle: async (req, res) => {
     try {
@@ -186,6 +256,7 @@ const controller = {
       }
 
       coupon.is_active = false;
+      coupon.status = 'DELETED';
       const deletedCoupon = await coupon.save();
       res.json(deletedCoupon);
     } catch (error) {
