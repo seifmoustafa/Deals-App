@@ -28,15 +28,21 @@ const couponSchema = new mongoose.Schema(
     // Discount Information
     discount_type: {
       type: String,
-      enum: ['DISCOUNT', 'CASHBACK'],
+      enum: ['DISCOUNT', 'CASHBACK', 'DISCOUNT_AND_CASHBACK'],
       required: true,
+      default: 'DISCOUNT',
     },
-    discount_value: {
+    discount: {
       type: Number,
-      required: function () {
-        return ['DISCOUNT', 'CASHBACK'].includes(this.discount_type);
-      },
+      default: 0,
+      min: [0, 'Discount value must be 0 or more'],
     },
+    cashback: {
+      type: Number,
+      default: 0,
+      min: [0, 'Cashback value must be 0 or more'],
+    },
+
     minimum_purchase: {
       amount: Number,
       currency: {
@@ -45,7 +51,6 @@ const couponSchema = new mongoose.Schema(
       },
     },
 
-    // Validation and Terms
     terms_and_conditions: [String],
     valid_for: {
       type: String,
@@ -73,7 +78,7 @@ const couponSchema = new mongoose.Schema(
     },
     success_rate: {
       type: mongoose.Schema.Types.Double,
-      default: 0.0, // Percentage of successful uses
+      default: 0.0,
     },
 
     // User Interaction
@@ -104,7 +109,6 @@ const couponSchema = new mongoose.Schema(
       },
     ],
 
-    // User Experience
     average_savings: {
       amount: Number,
       currency: {
@@ -117,7 +121,6 @@ const couponSchema = new mongoose.Schema(
       default: 0.0,
     },
 
-    // Status Fields
     is_verified: {
       type: Boolean,
       default: false,
@@ -147,6 +150,57 @@ const couponSchema = new mongoose.Schema(
   },
 );
 
+// Validation logic for discount_type
+couponSchema.pre('validate', function (next) {
+
+   console.log('Validating coupon:', {
+    discount_type: this.discount_type,
+    discount: this.discount,
+    cashback: this.cashback,
+  });
+  const { discount_type, discount, cashback } = this;
+
+  if (discount_type === 'DISCOUNT') {
+  if (discount <= 0) {
+    return next(new Error('Discount must be greater than 0 for DISCOUNT type'));
+  }
+  if (cashback > 0) {
+    return next(new Error('Cashback must be 0 for DISCOUNT type'));
+  }
+}
+
+if (discount_type === 'CASHBACK') {
+  if (cashback <= 0) {
+    return next(new Error('Cashback must be greater than 0 for CASHBACK type'));
+  }
+  if (discount > 0) {
+    return next(new Error('Discount must be 0 for CASHBACK type'));
+  }
+}
+
+if (discount_type === 'DISCOUNT_AND_CASHBACK') {
+  if (discount <= 0 || cashback <= 0) {
+    return next(new Error('Both discount and cashback must be greater than 0 for DISCOUNT_AND_CASHBACK type'));
+  }
+}
+
+next();
+});
+
+// Customize JSON output
+couponSchema.methods.toJSON = function () {
+  const obj = this.toObject({ virtuals: false });
+
+  obj.discount = ['DISCOUNT', 'DISCOUNT_AND_CASHBACK'].includes(obj.discount_type) ? obj.discount : 0;
+  obj.cashback = ['CASHBACK', 'DISCOUNT_AND_CASHBACK'].includes(obj.discount_type) ? obj.cashback : 0;
+
+  // Remove internal fields
+  // delete obj.discount;
+  // delete obj.cashback;
+
+  return obj;
+};
+
 // Indexes
 couponSchema.index({ store: 1, code: 1 }, { unique: true });
 couponSchema.index({ deleted_at: 1 });
@@ -156,19 +210,17 @@ couponSchema.index({ is_featured: 1 });
 couponSchema.index({ popularity_score: -1 });
 couponSchema.index({ 'verified_by.worked': 1 });
 
-// Middleware for soft deletes
+// Soft delete middleware
 couponSchema.pre('find', function () {
   this.where({ deleted_at: null });
 });
-
 couponSchema.pre('findOne', function () {
   this.where({ deleted_at: null });
 });
 
-// Update status based on various conditions
-couponSchema.pre('save', async function (next) {
+// Update status before save
+couponSchema.pre('save', function (next) {
   const now = new Date();
-
   if (this.expiry_date < now) {
     this.status = 'EXPIRED';
     this.is_active = false;
@@ -181,43 +233,49 @@ couponSchema.pre('save', async function (next) {
   } else if (this.is_active) {
     this.status = 'ACTIVE';
   }
-
   next();
 });
 
-// Methods
+// Update Coupons Count in the Store of the new Coupon
+couponSchema.post('save', async function (doc, next) {
+  const Store = mongoose.model('Store');
+  try {
+    const store = await Store.findById(doc.store);
+    if (store) {
+      await store.updateCouponCounts();
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Instance Methods
 couponSchema.methods.verify = async function (userId, worked) {
-  const verification = {
+  this.verified_by.push({
     user: userId,
     verified_at: new Date(),
     worked,
-  };
+  });
 
-  this.verified_by.push(verification);
-
-  // Update success rate
-  const totalVerifications = this.verified_by.length;
-  const successfulVerifications = this.verified_by.filter(
-    (v) => v.worked,
-  ).length;
-  this.success_rate = (successfulVerifications / totalVerifications) * 100;
+  const total = this.verified_by.length;
+  const successful = this.verified_by.filter(v => v.worked).length;
+  this.success_rate = (successful / total) * 100;
 
   return this.save();
 };
 
 couponSchema.methods.reportNotWorking = async function (userId, reason) {
-  const report = {
+  this.reported_not_working.push({
     user: userId,
     reported_at: new Date(),
     reason,
-  };
+  });
 
-  this.reported_not_working.push(report);
   return this.save();
 };
 
 couponSchema.methods.updatePopularityScore = async function () {
-  // Calculate popularity based on various factors
   const verificationWeight = 0.4;
   const successRateWeight = 0.3;
   const usageWeight = 0.3;
@@ -235,5 +293,7 @@ couponSchema.methods.updatePopularityScore = async function () {
 };
 
 const Coupon = mongoose.model('Coupon', couponSchema);
-
 module.exports = Coupon;
+
+
+

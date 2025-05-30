@@ -2,16 +2,22 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/coupon.controller');
 const hybridAuth = require('../middlewares/hybridAuth.middleware');
+const {
+  authenticateAdmin,
+  authorizeRole,
+} = require('../middlewares/admin.middleware');
 
 
 router.get('/',hybridAuth, controller.getAll);
 
 router.get('/:id',hybridAuth, controller.getSingle);
 
-router.post('/',hybridAuth, controller.create);
+router.get('/couponsByStore/:storeId',hybridAuth, controller.getCouponsByStoreId);
 
-router.patch('/:id',hybridAuth, controller.update);
+router.post('/',authenticateAdmin, authorizeRole(`super`,`regular`), controller.create);
 
-router.delete('/:id',hybridAuth, controller.delete);
+router.patch('/:id',authenticateAdmin, authorizeRole(`super`,`regular`), controller.update);
+
+router.delete('/:id',authenticateAdmin, authorizeRole(`super`,`regular`), controller.delete);
 
 module.exports = router;

@@ -184,6 +184,52 @@ const controller = {
     }
   },
 
+  getCouponsByStoreId :  async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { pageNo = 1, pageSize = 10, status, search } = req.query;
+
+    // Build base query
+    const query = {
+      store: storeId,
+      deleted_at: null,
+    };
+
+    // Optional status filter
+    if (status) {
+      query.status = status.toUpperCase(); // Ensure match with enum like 'ACTIVE'
+    }
+
+    // Optional search by code or title (case-insensitive, partial)
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [{ code: searchRegex }, { title: searchRegex }];
+    }
+
+    const skip = (parseInt(pageNo) - 1) * parseInt(pageSize);
+
+    // Execute query
+    const [coupons, totalItems] = await Promise.all([
+      Coupon.find(query).skip(skip).limit(parseInt(pageSize)).sort({ createdAt: -1 }),
+      Coupon.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: coupons,
+      pageNo: parseInt(pageNo),
+      pageSize: parseInt(pageSize),
+      totalItems,
+    });
+  } catch (error) {
+    console.error('Error fetching coupons by store:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+    });
+  }
+},
+
   create: async (req, res) => {
     const coupon = new Coupon({
       code: req.body.code,
@@ -191,7 +237,8 @@ const controller = {
       title: req.body.title,
       description: req.body.description,
       discount_type: req.body.discount_type,
-      discount_value: req.body.discount_value,
+      discount: req.body.discount,
+      cashback : req.body.cashback,
       minimum_purchase: req.body.minimum_purchase,
       terms_and_conditions: req.body.terms_and_conditions,
       valid_for: req.body.valid_for,
