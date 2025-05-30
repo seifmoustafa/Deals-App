@@ -301,11 +301,15 @@ const controller = {
       if (!coupon) {
         return res.status(404).json({ message: 'Coupon not found' });
       }
-
-      coupon.is_active = false;
-      coupon.status = 'DELETED';
-      const deletedCoupon = await coupon.save();
-      res.json(deletedCoupon);
+    const result = await Coupon.deleteOne({ _id: req.params.id });;
+    if (!result) {
+        return res.status(404).json({ message: 'Coupon not found' });
+            }
+    res.json({ message: 'Coupon deleted successfully' });
+      // coupon.is_active = false;
+      // coupon.status = 'DELETED';
+      // const deletedCoupon = await coupon.save();
+      // res.json(deletedCoupon);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
