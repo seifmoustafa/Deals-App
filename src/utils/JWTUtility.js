@@ -11,7 +11,7 @@ const generateToken = (user) => {
     },
     process.env.JWT_SECRET,
   //  { expiresIn: '1d' } // 24 hours
-    { expiresIn: '2m' } // 2 minutes
+    { expiresIn: '365d' } // 2 minutes
   );
 };
 
