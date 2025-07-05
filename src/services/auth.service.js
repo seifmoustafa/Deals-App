@@ -170,7 +170,8 @@ class AuthService {
     // If user doesn't exist, create one
     if (!user) {
       user = new User({
-        full_name: name,
+        // full_name: name,
+        full_name: name || email || 'Anonymous User',
         email,
         firebase_uid: uid,
         profile_image: { url: picture },
@@ -182,7 +183,6 @@ class AuthService {
 
     // Now safely check firebase provider and user status
     if (firebase?.sign_in_provider === 'password' && !user.is_active) {
-      console.log("Name is :" ,name);
       throw new Error('Email not verified');
     }
 
