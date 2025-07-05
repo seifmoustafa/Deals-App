@@ -171,7 +171,7 @@ class AuthService {
     if (!user) {
       user = new User({
         // full_name: name,
-        full_name: name || email || 'Anonymous User',
+        full_name: name || 'Anonymous User',
         email,
         firebase_uid: uid,
         profile_image: { url: picture },
