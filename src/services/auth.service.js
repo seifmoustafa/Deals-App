@@ -2,6 +2,7 @@ const admin = require('../config/firebase');
 const User = require('../models/User.model');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { Console } = require('console');
 
 class AuthService {
   constructor() {
@@ -181,8 +182,17 @@ class AuthService {
     }
 
     // Now safely check firebase provider and user status
-    if (firebase?.sign_in_provider === 'password' && !user.is_active) {
-      throw new Error('Email not verified');
+    // if (firebase?.sign_in_provider === 'password' && !user.is_active) {
+    //   throw new Error('Email not verified');
+    // }
+
+     if (firebase?.sign_in_provider === 'password') {
+      Console.log("Error in login with apple");
+      throw new Error('Firebase Login Failed ');
+    }
+    
+    if (!user.is_active) {
+       throw new Error('Email not verified');
     }
 
     return user.toPublicJSON();
