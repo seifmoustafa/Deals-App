@@ -36,6 +36,15 @@ const userSchema = new mongoose.Schema(
       enum: ['male', 'female', 'other'],
       default: null,
     },
+    interests: [{
+       type: mongoose.Schema.Types.ObjectId,
+       ref: "StoreCategory",
+       default: null,
+}],
+    isCountrySet: {
+      type: Boolean,
+      default: false,
+},
     country: {
       type: String,
       default: null,

@@ -44,7 +44,7 @@ const controller = {
       filter.$and.push({ gender });
     }
 
-      const users = await User.find(filter).sort(sort).skip(skip).limit(limit);
+      const users = await User.find(filter).populate("interests", "title").sort(sort).skip(skip).limit(limit);
       const totalUsers = await User.countDocuments(filter);
       const totalPages = Math.ceil(totalUsers / limit);
       res.json({
@@ -65,7 +65,7 @@ const controller = {
   async getById(req, res) {
     try {
       const { firebase_uid } = req.params;
-      const user = await User.findOne({firebase_uid});
+      const user = await User.findOne({firebase_uid}).populate("interests", "title");
       //const user = await User.findById(req.params.id);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -87,6 +87,7 @@ async create(req, res) {
     city,
     password,
     profile_image,
+    interests, 
   } = req.body;
 
   try {
@@ -98,6 +99,8 @@ async create(req, res) {
       ...(phone && /^\+?[1-9]\d{7,14}$/.test(phone) && { phoneNumber: phone.startsWith('+') ? phone : `+${phone}` }),
       //phoneNumber: phone ? `+${phone}` : undefined, // optional
     });
+
+    const isCountrySet = !!country; 
 
     // 2. Save user in MongoDB
     const user = new User({
@@ -111,6 +114,8 @@ async create(req, res) {
       password, // Will be hashed via mongoose pre-save
       profile_image,
       firebase_uid: firebaseUser.uid,
+      interests: Array.isArray(interests) && interests.length > 0 ? interests : null, // nullable
+      isCountrySet,
     });
 
     const newUser = await user.save();
@@ -149,7 +154,16 @@ async create(req, res) {
       }
 
       Object.keys(req.body).forEach((key) => {
-        if (user[key] !== undefined) {
+         if (key === "interests") {
+        // allow null or array
+        user.interests =
+          Array.isArray(req.body.interests) && req.body.interests.length > 0
+            ? req.body.interests
+            : null;
+      } else if (key === "country") {
+        user.country = req.body.country;
+        user.isCountrySet = !!req.body.country;
+      } else if (user[key] !== undefined) {
           user[key] = req.body[key];
         }
       });
@@ -172,7 +186,16 @@ async create(req, res) {
       }
 
       Object.keys(req.body).forEach((key) => {
-        if (user[key] !== undefined) {
+         if (key === "interests") {
+        // allow null or array
+        user.interests =
+          Array.isArray(req.body.interests) && req.body.interests.length > 0
+            ? req.body.interests
+            : null;
+      } else if (key === "country") {
+        user.country = req.body.country;
+        user.isCountrySet = !!req.body.country;
+      } else if (user[key] !== undefined) {
           user[key] = req.body[key];
         }
       });
@@ -197,7 +220,16 @@ async create(req, res) {
       }
 
       Object.keys(req.body).forEach((key) => {
-        if (user[key] !== undefined) {
+         if (key === "interests") {
+        // allow null or array
+        user.interests =
+          Array.isArray(req.body.interests) && req.body.interests.length > 0
+            ? req.body.interests
+            : null;
+      } else if (key === "country") {
+        user.country = req.body.country;
+        user.isCountrySet = !!req.body.country;
+      } else if (user[key] !== undefined) {
           user[key] = req.body[key];
         }
       });

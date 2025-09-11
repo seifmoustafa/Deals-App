@@ -1,4 +1,6 @@
 const Store = require('../models/Store.model');
+const Coupon = require("../models/Coupon.model");
+const Category = require("../models/Category.model");
 const queryBuilder = require('../utils/QueryBuilder');
 
 const controller = {
@@ -267,6 +269,79 @@ inActivateSelectedStores: async (req, res) => {
         }
       },
 
+
+  async search(req, res) {
+    try {
+      const {
+        type = "all",
+        search = "",
+        page = 1,
+        limit = 10,
+        is_active,
+        category,
+      } = req.query;
+
+      const skip = (page - 1) * limit;
+      const searchRegex = new RegExp(search, "i");
+
+      // Prepare queries
+      const storeQuery = {
+        deleted_at: null,
+        $or: [{ title: searchRegex }, { sub_title: searchRegex }],
+      };
+      if (is_active !== undefined) storeQuery.is_active = is_active === "true";
+      if (category) storeQuery.category = category;
+
+      const couponQuery = {
+        deleted_at: null,
+        $or: [{ code: searchRegex }, { title: searchRegex }],
+      };
+      if (is_active !== undefined) couponQuery.is_active = is_active === "true";
+
+      const categoryQuery = {
+        deleted_at: null,
+        $or: [{ title: searchRegex }, { slug: searchRegex }],
+      };
+      if (is_active !== undefined) categoryQuery.is_active = is_active === "true";
+
+      // Results
+      let results = {};
+
+      if (type === "store" || type === "all") {
+        const [data, total] = await Promise.all([
+          Store.find(storeQuery).skip(skip).limit(Number(limit)),
+          Store.countDocuments(storeQuery),
+        ]);
+        results.stores = { data, total };
+      }
+
+      if (type === "coupon" || type === "all") {
+        const [data, total] = await Promise.all([
+          Coupon.find(couponQuery).skip(skip).limit(Number(limit)),
+          Coupon.countDocuments(couponQuery),
+        ]);
+        results.coupons = { data, total };
+      }
+
+      if (type === "category" || type === "all") {
+        const [data, total] = await Promise.all([
+          Category.find(categoryQuery).skip(skip).limit(Number(limit)),
+          Category.countDocuments(categoryQuery),
+        ]);
+        results.categories = { data, total };
+      }
+
+      res.json({
+        success: true,
+        page: Number(page),
+        limit: Number(limit),
+        results,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: error.message });
+    }
+  },
 };
 
 module.exports = controller;
