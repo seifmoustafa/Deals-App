@@ -33,13 +33,19 @@ const storeSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    cashback: {
-      rate: {
-        type: mongoose.Schema.Types.Double,
-        default: 0.0,
+    countries: [
+      {
+        type: String,
+        trim: true,
       },
-      terms: [String],
-    },
+    ],
+    // cashback: {
+    //   rate: {
+    //     type: mongoose.Schema.Types.Double,
+    //     default: 0.0,
+    //   },
+    //   terms: [String],
+    // },
     average_savings: {
       type: mongoose.Schema.Types.Double,
       default: 0.0,

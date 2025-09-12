@@ -121,6 +121,7 @@ const controller = {
       store_url: req.body.store_url,
       category: req.body.category,
       description: req.body.description,
+      countries: req.body.countries,
       is_featured: req.body.is_featured,
     });
 
@@ -342,6 +343,83 @@ inActivateSelectedStores: async (req, res) => {
       res.status(500).json({ success: false, message: error.message });
     }
   },
+
+
+
+getStoresByUserCountry : async (req, res) => {
+  try {
+    const userCountry = req.user.country;
+    if (!userCountry) {
+      return res.status(400).json({ message: 'User country not set' });
+    }
+
+    // pagination params
+    const pageNo = parseInt(req.query.pageNo) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const skip = (pageNo - 1) * pageSize;
+
+    // search param
+    const search = req.query.search?.trim();
+
+    // base match (country filter always)
+    let matchStage = { countries: userCountry };
+
+    // aggregation pipeline
+    const pipeline = [
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'storecategories', 
+          localField: 'category',
+          foreignField: '_id',
+          as: 'category',
+        },
+      },
+      { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+    ];
+
+    
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { sub_title: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+            { 'category.title': { $regex: search, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    // total count
+    const totalCountPipeline = [...pipeline, { $count: 'count' }];
+    const totalCountResult = await Store.aggregate(totalCountPipeline);
+    const itemsCount = totalCountResult[0]?.count || 0;
+
+    // add pagination
+    pipeline.push({ $skip: skip }, { $limit: pageSize });
+
+    // run pipeline
+    const stores = await Store.aggregate(pipeline);
+
+    res.json({
+      data: stores,
+      pagination: {
+        pageNo,
+        pageSize,
+        itemsCount,
+        totalPages: Math.ceil(itemsCount / pageSize),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching stores by country:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+
+  }
+
+
 };
 
 module.exports = controller;

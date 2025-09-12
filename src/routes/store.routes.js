@@ -26,6 +26,8 @@ router.get('/',hybridAuth, controller.getAll);
 
 router.get('/search' , hybridAuth , controller.search);
 
+router.get('/storesByCountry',hybridAuth, controller.getStoresByUserCountry);
+
 router.get('/stores-bycategoryId/:categoryId',hybridAuth, controller.getStoresByCategoryId);
 
 router.get('/:id',hybridAuth, controller.getSingle);
