@@ -234,6 +234,7 @@ const controller = {
     const coupon = new Coupon({
       code: req.body.code,
       store: req.body.store,
+      country: req.body.country,
       title: req.body.title,
       description: req.body.description,
       discount_type: req.body.discount_type,
@@ -314,6 +315,106 @@ const controller = {
       res.status(500).json({ message: error.message });
     }
   },
+
+
+//  getCouponsByUserCountry : async (req, res) => {
+//   try {
+//     const userCountry = req.user.country;
+
+//     if (!userCountry) {
+//       return res.status(400).json({ message: 'User country not set' });
+//     }
+
+//     const coupons = await Coupon.find({ country: userCountry })
+//       .populate('store')
+//       .lean();
+
+//     res.json(coupons);
+//   } catch (error) {
+//     console.error('Error fetching coupons by country:', error);
+//     res.status(500).json({ message: 'Internal server error' });
+//   }
+// }
+
+
+
+getCouponsByUserCountry: async (req, res) => {
+  try {
+    const userCountry = req.user.country;
+    if (!userCountry) {
+      return res.status(400).json({ message: 'User country not set' });
+    }
+
+    // pagination params
+    const pageNo = parseInt(req.query.pageNo) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    const skip = (pageNo - 1) * pageSize;
+
+    // search param
+    const search = req.query.search?.trim();
+
+    // base match (country filter always)
+    let matchStage = { country: userCountry };
+
+    const basePipeline = [
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'stores',
+          localField: 'store',
+          foreignField: '_id',
+          as: 'store',
+        },
+      },
+      { $unwind: { path: '$store', preserveNullAndEmptyArrays: true } },
+    ];
+
+    // search filter
+    if (search) {
+      basePipeline.push({
+        $match: {
+          $or: [
+            { title: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+            { code: { $regex: search, $options: 'i' } },
+            { 'store.title': { $regex: search, $options: 'i' } },
+          ],
+        },
+      });
+    }
+
+    // ----- count pipeline -----
+    const countPipeline = [...basePipeline, { $count: 'count' }];
+    const countResult = await Coupon.aggregate(countPipeline);
+    const itemsCount = countResult[0]?.count || 0;
+
+    // ----- data pipeline -----
+    const dataPipeline = [
+      ...basePipeline,
+      { $sort: { createdAt: -1 } }, 
+      { $skip: skip },
+      { $limit: pageSize },
+    ];
+
+    const coupons = await Coupon.aggregate(dataPipeline);
+
+    res.json({
+      data: coupons,
+      pagination: {
+        pageNo,
+        pageSize,
+        itemsCount,
+      //  totalPages: Math.ceil(itemsCount / pageSize),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching coupons by country:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+
+
 };
 
 module.exports = controller;

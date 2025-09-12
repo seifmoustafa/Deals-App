@@ -15,6 +15,11 @@ const couponSchema = new mongoose.Schema(
       ref: 'Store',
       required: [true, 'Store reference is required'],
     },
+    country: {
+      type: String,
+      required: true,
+      trim: true
+   },
     title: {
       type: String,
       required: [true, 'Coupon title is required'],

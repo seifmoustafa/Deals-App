@@ -10,6 +10,8 @@ const {
 
 router.get('/',hybridAuth, controller.getAll);
 
+router.get('/couponsByCountry',hybridAuth, controller.getCouponsByUserCountry);
+
 router.get('/:id',hybridAuth, controller.getSingle);
 
 router.get('/couponsByStore/:storeId',hybridAuth, controller.getCouponsByStoreId);
