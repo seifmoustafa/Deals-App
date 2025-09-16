@@ -382,6 +382,56 @@ ActivateSelectedUsers: async (req, res) => {
   }
 },
 
+
+uploadProfileImage : async (req, res) => {
+  try {
+    // hybridAuth ممكن يكون جاب req.user أو req.admin — نأخذ أي واحد موجود
+    const actor = req.user || req.admin;
+    if (!actor) return res.status(401).json({ message: 'Unauthorized' });
+
+    // multer-storage-cloudinary يحط الملف في req.file
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // req.file.path = URL, req.file.filename = public_id (مفيد لحذف القديم)
+    const { path: url, filename: public_id } = req.file;
+
+    // احصل على اليوزر من الداتا بيس عشان نحدث
+    const user = await User.findById(actor._id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // لو فيه صورة قديمة محفوظة عندك (public_id) احذفها من Cloudinary
+    // نفترض إنك خزنت public_id في user.profile_image.path
+    try {
+      if (user.profile_image?.path) {
+        // path هنا نفترضها public_id — لو خزنت URL بدل public_id, تحتاج تخزّن public_id من البداية
+        await cloudinary.uploader.destroy(user.profile_image.path);
+      }
+    } catch (e) {
+      console.warn('Failed to delete old image from Cloudinary', e.message);
+      // ما نرمي الخطأ لو الحذف فشل، نكمل لنسجل الصورة الجديدة
+    }
+
+    // حدّث اليوزر بحقل الصورة الجديدة
+    user.profile_image = {
+      url,
+      path: public_id, // public_id مهم للحذف لاحقاً
+    };
+
+    await user.save();
+
+    // رد بيانات عامة (لو عندك toPublicJSON استخدمه)
+    res.json({ success: true, profile_image: user.profile_image });
+  } catch (error) {
+    console.error('Upload profile image error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+
+
+
 };
 
 module.exports = controller;

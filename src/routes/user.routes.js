@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/user.controller');
 const hybridAuth = require('../middlewares/hybridAuth.middleware');
+const upload = require('../middlewares/uploadProfile.middleware');
 const {
   authenticateAdmin,
   authorizeRole,
@@ -32,6 +33,8 @@ router.patch('/update-user/:id',authenticateAdmin, authorizeRole(`super`,`regula
 
 
 //#region Mobile App
+router.post('/upload-profile', hybridAuth, upload.single('profileImage'), controller.uploadProfileImage);
+
 router.get('/:firebase_uid',hybridAuth, controller.getById);
 
 router.patch('/:firebase_uid',hybridAuth, controller.update);
