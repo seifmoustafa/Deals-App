@@ -33,7 +33,17 @@ router.patch('/update-user/:id',authenticateAdmin, authorizeRole(`super`,`regula
 
 
 //#region Mobile App
-router.post('/upload-profile', hybridAuth, upload.single('profileImage'), controller.uploadProfileImage);
+// router.post('/upload-profile', hybridAuth, upload.single('profileImage'), controller.uploadProfileImage);
+router.post(
+  "/upload-profile",
+  upload.single("profileImage"),
+  (req, res) => {
+    console.log("Body:", req.body);
+    console.log("File:", req.file);
+    res.json({ body: req.body, file: req.file });
+  }
+);
+
 
 router.get('/:firebase_uid',hybridAuth, controller.getById);
 
