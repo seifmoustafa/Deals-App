@@ -24,6 +24,9 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors());
+
+app.use('/api/users', userRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -32,7 +35,6 @@ app.use('/api/home', homeRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/coupons', couponRoutes);
-app.use('/api/users', userRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/notifications', notificationRoutes);
