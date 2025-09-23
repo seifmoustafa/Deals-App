@@ -24,9 +24,6 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors());
-
-app.use('/api/users', userRoutes);
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -35,10 +32,19 @@ app.use('/api/home', homeRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bookmarks', bookmarkRoute);
+
+
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/users/upload-profile')) {
+    return next(); // skip parsers for file upload
+  }
+  express.json()(req, res, next);
+});
 
 // Basic error handling middleware
 app.use((err, req, res, next) => {
