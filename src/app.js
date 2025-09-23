@@ -23,8 +23,8 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 
-// 🟢 استثناء رفع الصور: متسيبش parsers يأكلوا الـ multipart
-app.use('/api/users/upload-profile', userRoutes);
+app.use('/api/users', userRoutes); // باقي الروتات بتاعة users
+
 
 // 🟢 باقي الروتات ممكن تستخدم parsers عادي
 app.use(express.json({ limit: '10mb' }));
@@ -35,7 +35,6 @@ app.use('/api/home', homeRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/coupons', couponRoutes);
-app.use('/api/users', userRoutes); // باقي الروتات بتاعة users
 app.use('/api/admins', adminRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/notifications', notificationRoutes);
