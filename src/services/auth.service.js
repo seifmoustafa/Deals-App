@@ -15,7 +15,7 @@ class AuthService {
             },
           })
         : nodemailer.createTransport({
-          host: "live.smtp.mailtrap.io",
+          host: "sandbox.smtp.mailtrap.io",
           port: 587,
           auth: {
             user: process.env.MAILTRAP_USER,
