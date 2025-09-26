@@ -1,7 +1,10 @@
 const authService = require('../services/auth.service');
 const { validationResult } = require('express-validator');
 const { generateToken } = require('../utils/JWTUtility');
+const { sendMail } = require('../utils/mailer');
 const User = require('../models/User.model');
+const crypto = require("crypto");
+
 
 const controller = {
   register: async (req, res) => {
@@ -17,6 +20,66 @@ const controller = {
       res.status(400).json({ message: error.message });
     }
   },
+
+
+
+
+// register: async (req, res) => {
+//   try {
+//     const { full_name, email, phone, password } = req.body;
+
+//     // تحقق لو اليوزر موجود
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: "The email address is already in use" });
+//     }
+
+//     // اعمل يوزر جديد
+//     const user = new User({ full_name, email, phone, password, isVerified: false });
+
+//     // توليد OTP
+//     const otp = generateOTP();
+
+
+//     await user.save();
+
+//     // إرسال OTP على الإيميل
+//     await sendMail(
+//       email,
+//       full_name,
+//       otp
+//     );
+
+//     res.json({ message: "User registered successfully. Please verify your email." });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// },
+
+// verifyEmail: async (req, res) => {
+//   try {
+//     const { email, otp } = req.body;
+
+//     const user = await User.findOne({ email });
+//     if (!user) return res.status(400).json({ message: "User not found" });
+
+//     if (user.otp !== otp || Date.now() > user.otpExpires) {
+//       return res.status(400).json({ message: "Invalid or expired OTP" });
+//     }
+
+//     user.isVerified = true;
+//     user.otp = null;
+//     user.otpExpires = null;
+//     await user.save();
+
+//     res.json({ message: "Email verified successfully" });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// },
+
 
   verifyEmail: async (req, res) => {
     try {
@@ -181,4 +244,8 @@ const controller = {
 };
 
 
+
+
 module.exports = controller;
+
+
