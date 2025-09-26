@@ -2,7 +2,7 @@ const app = require('./app');
 const connectDB = require('./config/database');
 
 const PORT = process.env.PORT || 3000;
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";  // for development only
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";  // for development only
 
 connectDB().then(() => {
   app.listen(PORT, () => {
