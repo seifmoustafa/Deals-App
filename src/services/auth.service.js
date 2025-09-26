@@ -60,7 +60,7 @@ class AuthService {
   generateOTP() {
   const randomBuffer = crypto.randomBytes(4);
   const randomNumber = randomBuffer.readUInt32BE(0) % 1000000;
-  return randomNumber.toString().padStart(6, "0");
+  return randomNumber.toString().padStart(4, "0");
 }
 
     async sendOTP(email,full_name, otp) {
