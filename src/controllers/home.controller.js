@@ -3,13 +3,72 @@ const Store = require('../models/Store.model');
 const Coupon = require('../models/Coupon.model');
 
 const controller = {
-  mobile: async (req, res) => {
+  // mobile: async (req, res) => {
+  //   try {
+  //     const { announcementsCount, storesCount, couponsCount } = req.query;
+  //     const announcements = await Announcement.find().limit(
+  //       announcementsCount || 5,
+  //     );
+  //     const stores = await Store.find().limit(storesCount || 5);
+  //     const couponPipeline = [
+  //       {
+  //         $lookup: {
+  //           from: 'stores',
+  //           localField: 'store',
+  //           foreignField: '_id',
+  //           as: 'store',
+  //         },
+  //       },
+  //       {
+  //         $unwind: '$store',
+  //       },
+  //       {
+  //         $limit: parseInt(couponsCount) || 5,
+  //       },
+  //       {
+  //         $project: {
+  //           code: 1,
+  //           'store._id': 1,
+  //           'store.title': 1,
+  //           'store.image': 1,
+  //           title: 1,
+  //           description: 1,
+  //           discount_type: 1,
+  //           discount_value: 1,
+  //           start_date: 1,
+  //           expiry_date: 1,
+  //           valid_for: 1,
+  //           createdAt: 1,
+  //         },
+  //       },
+  //     ];
+  //     const coupons = await Coupon.aggregate(couponPipeline);
+  //     res.json({ announcements, stores, coupons });
+  //   } catch (error) {
+  //     res.status(500).json({ message: error.message });
+  //   }
+  // },
+
+
+   mobile: async (req, res) => {
     try {
+      const user = req.user;
+      if (!user || !user.country) {
+        return res.status(400).json({ message: 'User country not set' });
+      }
+
       const { announcementsCount, storesCount, couponsCount } = req.query;
-      const announcements = await Announcement.find().limit(
-        announcementsCount || 5,
-      );
-      const stores = await Store.find().limit(storesCount || 5);
+
+      // 1. Announcements (كلها من غير country)
+      const announcements = await Announcement.find()
+        .limit(parseInt(announcementsCount) || 5);
+
+      // 2. Stores (متفلترة بالـ country)
+      const stores = await Store.find({
+        countries: user.country,
+      }).limit(parseInt(storesCount) || 5);
+
+      // 3. Coupons (برضه متفلترة بالـ country بتاع الـ store)
       const couponPipeline = [
         {
           $lookup: {
@@ -19,8 +78,11 @@ const controller = {
             as: 'store',
           },
         },
+        { $unwind: '$store' },
         {
-          $unwind: '$store',
+          $match: {
+            'store.countries': user.country,
+          },
         },
         {
           $limit: parseInt(couponsCount) || 5,
@@ -28,9 +90,6 @@ const controller = {
         {
           $project: {
             code: 1,
-            'store._id': 1,
-            'store.title': 1,
-            'store.image': 1,
             title: 1,
             description: 1,
             discount_type: 1,
@@ -39,15 +98,23 @@ const controller = {
             expiry_date: 1,
             valid_for: 1,
             createdAt: 1,
+            'store._id': 1,
+            'store.title': 1,
+            'store.image': 1,
+            'store.store_url': 1,
           },
         },
       ];
+
       const coupons = await Coupon.aggregate(couponPipeline);
+
       res.json({ announcements, stores, coupons });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
+
+
 };
 
 module.exports = controller;

@@ -22,29 +22,23 @@ const app = express();
 
 app.use(helmet());
 app.use(cors());
-
-app.use('/api/users', userRoutes); // باقي الروتات بتاعة users
-
-
-// 🟢 باقي الروتات ممكن تستخدم parsers عادي
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/home', homeRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/stores', storeRoutes);
+app.use('/api/users', userRoutes); 
 app.use('/api/coupons', couponRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/bookmarks', bookmarkRoute);
 
-// Debug صغير يشوف نوع الـ content-type
-app.use((req, res, next) => {
-  console.log("Incoming content-type:", req.headers['content-type']);
-  next();
-});
+
 
 // Errors
 app.use((err, req, res, next) => {

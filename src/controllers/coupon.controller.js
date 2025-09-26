@@ -30,9 +30,17 @@ const controller = {
       ? { 'store.category': new mongoose.Types.ObjectId(req.query.category) }
       : null;
 
+    const discountTypeFilter =
+      req.query.discountType &&
+      ['DISCOUNT', 'CASHBACK', 'DISCOUNT_AND_CASHBACK'].includes(
+        req.query.discountType
+      )
+        ? { discount_type: req.query.discountType }
+        : null;
+
     // Main pipeline
     const pipeline = [
-      { $match: { ...baseMatch, ...(storeFilter || {}) } },
+      { $match: { ...baseMatch, ...(storeFilter || {}), ...(discountTypeFilter || {}) } },
       {
         $lookup: {
           from: 'stores',
@@ -48,9 +56,9 @@ const controller = {
       { $limit: limit },
     ];
 
-    // Count pipeline (same as main pipeline but without skip/limit)
+    // Count pipeline
     const countPipeline = [
-      { $match: { ...baseMatch, ...(storeFilter || {}) } },
+      { $match: { ...baseMatch, ...(storeFilter || {}), ...(discountTypeFilter || {}) } },
       {
         $lookup: {
           from: 'stores',
@@ -61,12 +69,12 @@ const controller = {
       },
       { $unwind: { path: '$store', preserveNullAndEmptyArrays: true } },
       ...(categoryFilter ? [{ $match: categoryFilter }] : []),
-      { $count: 'total' }
+      { $count: 'total' },
     ];
 
     const [coupons, countResult] = await Promise.all([
       Coupon.aggregate(pipeline),
-      Coupon.aggregate(countPipeline)
+      Coupon.aggregate(countPipeline),
     ]);
 
     const totalCoupons = countResult[0]?.total || 0;
@@ -389,12 +397,20 @@ getCouponsByUserCountry: async (req, res) => {
     const itemsCount = countResult[0]?.count || 0;
 
     // ----- data pipeline -----
-    const dataPipeline = [
+   const dataPipeline = [
       ...basePipeline,
-      { $sort: { createdAt: -1 } }, 
+      { $sort: { createdAt: -1 } },
       { $skip: skip },
       { $limit: pageSize },
-    ];
+     {
+    $replaceRoot: {
+      newRoot: {
+        $mergeObjects: ["$$ROOT", { store: "$store" }]
+      }
+    }
+  }
+];
+
 
     const coupons = await Coupon.aggregate(dataPipeline);
 

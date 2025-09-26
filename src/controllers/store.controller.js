@@ -271,78 +271,166 @@ inActivateSelectedStores: async (req, res) => {
       },
 
 
-  async search(req, res) {
-    try {
-      const {
-        type = "all",
-        search = "",
-        page = 1,
-        limit = 10,
-        is_active,
-        category,
-      } = req.query;
+      async search(req, res) {
+  try {
+    const { search, pageNo = 1, pageSize = 10 } = req.query;
+    const userCountry = req.user?.country;
 
-      const skip = (page - 1) * limit;
-      const searchRegex = new RegExp(search, "i");
-
-      // Prepare queries
-      const storeQuery = {
-        deleted_at: null,
-        $or: [{ title: searchRegex }, { sub_title: searchRegex }],
-      };
-      if (is_active !== undefined) storeQuery.is_active = is_active === "true";
-      if (category) storeQuery.category = category;
-
-      const couponQuery = {
-        deleted_at: null,
-        $or: [{ code: searchRegex }, { title: searchRegex }],
-      };
-      if (is_active !== undefined) couponQuery.is_active = is_active === "true";
-
-      const categoryQuery = {
-        deleted_at: null,
-        $or: [{ title: searchRegex }, { slug: searchRegex }],
-      };
-      if (is_active !== undefined) categoryQuery.is_active = is_active === "true";
-
-      // Results
-      let results = {};
-
-      if (type === "store" || type === "all") {
-        const [data, total] = await Promise.all([
-          Store.find(storeQuery).skip(skip).limit(Number(limit)),
-          Store.countDocuments(storeQuery),
-        ]);
-        results.stores = { data, total };
-      }
-
-      if (type === "coupon" || type === "all") {
-        const [data, total] = await Promise.all([
-          Coupon.find(couponQuery).skip(skip).limit(Number(limit)),
-          Coupon.countDocuments(couponQuery),
-        ]);
-        results.coupons = { data, total };
-      }
-
-      if (type === "category" || type === "all") {
-        const [data, total] = await Promise.all([
-          Category.find(categoryQuery).skip(skip).limit(Number(limit)),
-          Category.countDocuments(categoryQuery),
-        ]);
-        results.categories = { data, total };
-      }
-
-      res.json({
-        success: true,
-        page: Number(page),
-        limit: Number(limit),
-        results,
+    if (!search) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required',
       });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ success: false, message: error.message });
     }
-  },
+
+    const skip = (Number(pageNo) - 1) * Number(pageSize);
+    const limit = Number(pageSize);
+
+    // ✅ Stores
+    const [stores, storesCount] = await Promise.all([
+      Store.find({
+        countries: userCountry,
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      })
+        .skip(skip)
+        .limit(limit),
+      Store.countDocuments({
+        countries: userCountry,
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      }),
+    ]);
+
+    // ✅ Coupons
+    const [coupons, couponsCount] = await Promise.all([
+      Coupon.find({
+        country: userCountry,
+        $or: [
+          { code: { $regex: search, $options: 'i' } },
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      })
+        .populate('store', 'title image.url')
+        .skip(skip)
+        .limit(limit),
+      Coupon.countDocuments({
+        country: userCountry,
+        $or: [
+          { code: { $regex: search, $options: 'i' } },
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      }),
+    ]);
+
+    // ✅ Categories
+    const [categories, categoriesCount] = await Promise.all([
+      Category.find({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      })
+        .skip(skip)
+        .limit(limit),
+      Category.countDocuments({
+        $or: [
+          { title: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ],
+      }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        stores,
+        coupons,
+        categories,
+      },
+      pageNo: Number(pageNo),
+      pageSize: Number(pageSize),
+      itemsCount: {
+        stores: storesCount,
+        coupons: couponsCount,
+        categories: categoriesCount,
+      },
+    });
+  } catch (err) {
+    console.error('Search error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+},
+
+
+// async search(req, res) {
+//   try {
+//     const { search } = req.query;
+//     const userCountry = req.user?.country; // ✅ country بتاع اليوزر اللي عامل لوجن
+
+//     if (!search) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Search query is required',
+//       });
+//     }
+
+//     // ✅ Stores بالـ country
+//     const stores = await Store.find({
+//       countries: userCountry,
+//       $or: [
+//         { title: { $regex: search, $options: 'i' } },
+//         { description: { $regex: search, $options: 'i' } },
+//       ],
+//     });
+
+//     // ✅ Coupons بالـ country + populate بس title و image.url من الـ store
+//     const coupons = await Coupon.find({
+//       country: userCountry,
+//       $or: [
+//         { code: { $regex: search, $options: 'i' } },
+//         { title: { $regex: search, $options: 'i' } },
+//         { description: { $regex: search, $options: 'i' } },
+//       ],
+//     }).populate('store', 'title image.url');
+
+//     // ✅ Categories (من غير country)
+//     const categories = await Category.find({
+//       $or: [
+//         { title: { $regex: search, $options: 'i' } },
+//         { description: { $regex: search, $options: 'i' } },
+//       ],
+//     });
+
+//     res.status(200).json({
+//       success: true,
+//       data: {
+//         stores,
+//         coupons,
+//         categories,
+//       },
+//     });
+//   } catch (err) {
+//     console.error('Search error:', err);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Internal server error',
+//     });
+//   }
+// },
+
+
+
+  
 
 
 
