@@ -3,6 +3,7 @@ const User = require('../models/User.model');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const { sendMail } = require('../utils/mailer');
+const sgMail = require('@sendgrid/mail')
 
 
 class AuthService {
@@ -90,24 +91,48 @@ class AuthService {
   //         );
   // }
 
-  async sendOTP(email, otp) {
-    const mailOptions = {
-      from: {
-       // address: 'hello@example.com',
-       address: 'noreply@demomailtrap.co',
-        name: 'Deals App',
-      },
-      to: email,
-      subject: 'Email Verification OTP',
+    async sendOTP(email,full_name, otp) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+    const msg = {
+  to: email, // Change to your recipient
+  from: 'minalatif18@gmail.com', // Change to your verified sender
+   subject: 'Email Verification OTP',
       html: `
         <h1>Email Verification</h1>
         <p>Your verification code is: <strong>${otp}</strong></p>
         <p>This code will expire in 10 minutes.</p>
       `,
-    };
+}
+sgMail
+  .send(msg)
+  .then(() => {
+    console.log('Email sent')
+  })
+  .catch((error) => {
+    console.error(error)
+  })
 
-    await this.transporter.sendMail(mailOptions);
   }
+  
+
+  // async sendOTP(email, otp) {
+  //   const mailOptions = {
+  //     from: {
+  //      // address: 'hello@example.com',
+  //      address: 'noreply@demomailtrap.co',
+  //       name: 'Deals App',
+  //     },
+  //     to: email,
+  //     subject: 'Email Verification OTP',
+  //     html: `
+  //       <h1>Email Verification</h1>
+  //       <p>Your verification code is: <strong>${otp}</strong></p>
+  //       <p>This code will expire in 10 minutes.</p>
+  //     `,
+  //   };
+
+  //   await this.transporter.sendMail(mailOptions);
+  // }
 
   storeOTP(email, otp) {
     this.otpStore.set(email, {
@@ -128,42 +153,8 @@ class AuthService {
 
   
 
-//   async registerWithEmail(userData) {
-//  try {
-//       const firebaseUser = await admin.auth().createUser({
-//         email: userData.email,
-//         password: userData.password,
-//         displayName: userData.full_name,
-//       });
-
-//       const otp = this.generateOTP();
-//       await this.sendOTP(userData.email,userData.full_name, otp);
-//       this.storeOTP(userData.email, otp);
-
-//       // Create user in MongoDB (but mark as unverified)
-//       const user = new User({
-//         full_name: userData.full_name,
-//         email: userData.email,
-//         phone: userData.phone,
-//         password: userData.password,
-//         firebase_uid: firebaseUser.uid,
-//         is_active: false, // Will be activated after email verification
-//       });
-
-//          await user.save();
-//       return { firebase_uid: firebaseUser.uid, email: user.email };
-//      // return { userId: user._id, email: user.email };
-//     } catch (error) {
-//       if (error.uid) {
-//         await admin.auth().deleteUser(error.uid);
-//       }
-//       throw error;
-//     }
-
-//   }
-
   async registerWithEmail(userData) {
-    try {
+ try {
       const firebaseUser = await admin.auth().createUser({
         email: userData.email,
         password: userData.password,
@@ -171,7 +162,7 @@ class AuthService {
       });
 
       const otp = this.generateOTP();
-      await this.sendOTP(userData.email, otp);
+      await this.sendOTP(userData.email,userData.full_name, otp);
       this.storeOTP(userData.email, otp);
 
       // Create user in MongoDB (but mark as unverified)
@@ -184,7 +175,7 @@ class AuthService {
         is_active: false, // Will be activated after email verification
       });
 
-      await user.save();
+         await user.save();
       return { firebase_uid: firebaseUser.uid, email: user.email };
      // return { userId: user._id, email: user.email };
     } catch (error) {
@@ -193,7 +184,41 @@ class AuthService {
       }
       throw error;
     }
+
   }
+
+  // async registerWithEmail(userData) {
+  //   try {
+  //     const firebaseUser = await admin.auth().createUser({
+  //       email: userData.email,
+  //       password: userData.password,
+  //       displayName: userData.full_name,
+  //     });
+
+  //     const otp = this.generateOTP();
+  //     await this.sendOTP(userData.email, otp);
+  //     this.storeOTP(userData.email, otp);
+
+  //     // Create user in MongoDB (but mark as unverified)
+  //     const user = new User({
+  //       full_name: userData.full_name,
+  //       email: userData.email,
+  //       phone: userData.phone,
+  //       password: userData.password,
+  //       firebase_uid: firebaseUser.uid,
+  //       is_active: false, // Will be activated after email verification
+  //     });
+
+  //     await user.save();
+  //     return { firebase_uid: firebaseUser.uid, email: user.email };
+  //    // return { userId: user._id, email: user.email };
+  //   } catch (error) {
+  //     if (error.uid) {
+  //       await admin.auth().deleteUser(error.uid);
+  //     }
+  //     throw error;
+  //   }
+  // }
 
   async verifyEmail(email, otp) {
     if (!this.verifyOTP(email, otp)) {
