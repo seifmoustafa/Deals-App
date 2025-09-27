@@ -9,20 +9,25 @@ class AuthService {
   constructor() {
     this.transporter =
       process.env.NODE_ENV === 'development'
-        ? nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-              user: process.env.GMAIL_USER,
-              pass: process.env.GMAIL_PASS,
-            },
-          })
-        : nodemailer.createTransport({
-          host: "live.smtp.mailtrap.io",
-          port: 587,
-          auth: {
-            user: process.env.MAILTRAP_USER,
-            pass: process.env.MAILTRAP_PASS,
-          },
+       ? (console.log("📧 Using Gmail Transporter"),
+      nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.GMAIL_USER,
+          pass: process.env.GMAIL_PASS,
+        },
+        tls: {
+    rejectUnauthorized: false, // ⚠️ bypass self-signed certs
+  }
+      }))
+       : (console.log("📧 Using Mailtrap Transporter"),
+      nodemailer.createTransport({
+        host: "live.smtp.mailtrap.io",
+        port: 587,
+        auth: {
+          user: process.env.MAILTRAP_USER,
+          pass: process.env.MAILTRAP_PASS,
+        },
             // Adding timeout and connection timeout settings
             connectionTimeout: 10000,
             greetingTimeout: 5000,
@@ -30,8 +35,19 @@ class AuthService {
             // Adding debug option to help troubleshoot connection issues
             debug: true,
             logger: true,
-          });
+          }));
 
+          console.log("NODE_ENV:", process.env.NODE_ENV);
+          console.log("GMAIL_USER:", process.env.GMAIL_USER);
+          console.log("MAILTRAP_USER:", process.env.MAILTRAP_USER);
+
+          this.transporter.verify((err, success) => {
+          if (err) {
+          console.error("SMTP Error:", err);
+           } else {
+           console.log("SMTP connected:", success);
+        }
+});
     // Store OTPs temporarily (in production, use Redis or similar)
     this.otpStore = new Map();
   }
