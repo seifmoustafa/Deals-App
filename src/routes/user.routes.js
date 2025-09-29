@@ -34,15 +34,34 @@ router.patch('/update-user/:id',authenticateAdmin, authorizeRole(`super`,`regula
 
 //#region Mobile App
 // router.post('/upload-profile', hybridAuth, upload.single('profileImage'), controller.uploadProfileImage);
+// router.post(
+//   "/upload-profile",
+//   upload.single("profileImage"),
+//   (req, res) => {
+//     console.log("Body:", req.body);
+//     console.log("File:", req.file);
+//     res.json({ body: req.body, file: req.file });
+//   }
+// );
+
+// مؤقت لِ debugging — استعمله بدل الراوت الحالي
 router.post(
-  "/upload-profile",
-  upload.single("profileImage"),
+  "/upload-profile-debug",
+  (req, res, next) => {
+    console.log('--- incoming request headers ---');
+    console.log('content-type:', req.headers['content-type']);
+    console.log('method:', req.method);
+    next();
+  },
+  upload.single('profileImage'),
   (req, res) => {
-    console.log("Body:", req.body);
-    console.log("File:", req.file);
-    res.json({ body: req.body, file: req.file });
+    console.log('--- after multer ---');
+    console.log('req.body keys:', Object.keys(req.body || {}));
+    console.log('req.file:', req.file); // <-- هنا نحتاج اللوج
+    res.json({ ok: true, filePresent: !!req.file });
   }
 );
+
 
 
 router.get('/:firebase_uid',hybridAuth, controller.getById);
