@@ -46,7 +46,7 @@ router.patch('/update-user/:id',authenticateAdmin, authorizeRole(`super`,`regula
 
 // مؤقت لِ debugging — استعمله بدل الراوت الحالي
 router.post(
-  "/upload-profile-debug",
+  "/upload-profile",
   (req, res, next) => {
     console.log('--- incoming request headers ---');
     console.log('content-type:', req.headers['content-type']);
