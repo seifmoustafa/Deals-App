@@ -70,7 +70,11 @@ const controller = {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      res.json(user.toPublicJSON());
+      // res.json(user.toPublicJSON());
+      res.json({
+  ...user.toPublicJSON(),
+  profile_image: user.profile_image?.url || null,
+});
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
