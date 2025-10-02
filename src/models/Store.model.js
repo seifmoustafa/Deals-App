@@ -15,7 +15,7 @@ const storeSchema = new mongoose.Schema(
     image: {
       url: {
         type: String,
-        required: [true, 'Store image URL is required'],
+       // required: [true, 'Store image URL is required'],
       },
       path: String, // For Firebase Storage reference
     },
