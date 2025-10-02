@@ -50,7 +50,6 @@ router.post(
 //   }
 // );
 
-// مؤقت لِ debugging — استعمله بدل الراوت الحالي
 // router.post(
 //   "/upload-profile",
 //   (req, res, next) => {
@@ -63,7 +62,7 @@ router.post(
 //   (req, res) => {
 //     console.log('--- after multer ---');
 //     console.log('req.body keys:', Object.keys(req.body || {}));
-//     console.log('req.file:', req.file); // <-- هنا نحتاج اللوج
+//     console.log('req.file:', req.file); 
 //     res.json({ ok: true, filePresent: !!req.file });
 //   }
 // );

@@ -505,7 +505,33 @@ getStoresByUserCountry : async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 
+  },
+
+
+  uploadImage: async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image uploaded' });
+    }
+
+    const imageUrl = req.file.path;  
+    const imagePublicId = req.file.filename;
+
+    res.status(200).json({
+      message: 'Image uploaded successfully',
+      data: {
+        url: imageUrl,
+        public_id: imagePublicId,
+      },
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ message: 'Error uploading image' });
   }
+},
+
+
+
 
 
 };

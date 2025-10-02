@@ -3,6 +3,7 @@ const router = express.Router();
 const controller = require('../controllers/store.controller');
 const Store = require('../models/Store.model');
 const hybridAuth = require('../middlewares/hybridAuth.middleware');
+const uploadStore = require('../middlewares/uploadStore.middleware');
 const {
   authenticateAdmin,
   authorizeRole,
@@ -18,6 +19,15 @@ router.patch('/activate-selectedStore',authenticateAdmin, authorizeRole(`super`,
 router.patch('/inactivate-selectedStore',authenticateAdmin, authorizeRole(`super`,`regular`), controller.inActivateSelectedStores);
 
 router.delete('/delete-selectedStore', authenticateAdmin, authorizeRole(`super`,`regular`), controller.deleteSelectedStores);
+
+
+router.post(
+  '/upload-image',
+  uploadStore.single('image'),
+  authenticateAdmin,
+  authorizeRole(`super`,`regular`),
+  controller.uploadImage
+);
 
 
 
