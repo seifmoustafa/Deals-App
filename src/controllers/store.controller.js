@@ -117,7 +117,7 @@ const controller = {
     const store = new Store({
       title: req.body.title,
       sub_title: req.body.sub_title,
-      image: req.body.image,
+      // image: req.body.image,
       store_url: req.body.store_url,
       category: req.body.category,
       description: req.body.description,

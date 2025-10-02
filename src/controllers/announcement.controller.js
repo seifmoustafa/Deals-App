@@ -93,6 +93,47 @@ const controller = {
       res.status(500).json({ message: error.message });
     }
   },
+
+
+   uploadImage: async (req, res) => {
+    try {
+      const { announcementId } = req.params;
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No image uploaded' });
+      }
+
+      const imageUrl = req.file.path;
+      const imagePublicId = req.file.filename;
+
+      const updatedAnnouncement = await Announcement.findByIdAndUpdate(
+        announcementId,
+        {
+          image: {
+            url: imageUrl,
+            public_id: imagePublicId,
+          },
+        },
+        { new: true } 
+      );
+
+      if (!updatedAnnouncement) {
+        return res.status(404).json({ message: 'Announcement not found' });
+      }
+
+      res.status(200).json({
+        message: 'Image uploaded successfully',
+        data: updatedAnnouncement,
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: 'Error uploading image' });
+    }
+  },
+
+
+
+
 };
 
 module.exports = controller;
