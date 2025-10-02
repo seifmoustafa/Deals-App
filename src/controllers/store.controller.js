@@ -514,21 +514,55 @@ getStoresByUserCountry : async (req, res) => {
       return res.status(400).json({ message: 'No image uploaded' });
     }
 
-    const imageUrl = req.file.path;  
+    const { storeId } = req.params; 
+
+    const imageUrl = req.file.path;
     const imagePublicId = req.file.filename;
 
+    const store = await Store.findByIdAndUpdate(
+      storeId,
+      { image: { url: imageUrl, path: imagePublicId } },
+      { new: true }
+    );
+
+    if (!store) {
+      return res.status(404).json({ message: 'Store not found' });
+    }
+
     res.status(200).json({
-      message: 'Image uploaded successfully',
-      data: {
-        url: imageUrl,
-        public_id: imagePublicId,
-      },
+      message: 'Image uploaded and linked to store successfully',
+      data: store,
     });
   } catch (error) {
     console.error('Upload error:', error);
     res.status(500).json({ message: 'Error uploading image' });
   }
-},
+}
+
+
+
+
+//   uploadImage: async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ message: 'No image uploaded' });
+//     }
+
+//     const imageUrl = req.file.path;  
+//     const imagePublicId = req.file.filename;
+
+//     res.status(200).json({
+//       message: 'Image uploaded successfully',
+//       data: {
+//         url: imageUrl,
+//         public_id: imagePublicId,
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Upload error:', error);
+//     res.status(500).json({ message: 'Error uploading image' });
+//   }
+// },
 
 
 

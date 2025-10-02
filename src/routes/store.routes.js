@@ -22,7 +22,7 @@ router.delete('/delete-selectedStore', authenticateAdmin, authorizeRole(`super`,
 
 
 router.post(
-  '/upload-image',
+  '/:storeId/upload-image',
   uploadStore.single('image'),
   authenticateAdmin,
   authorizeRole(`super`,`regular`),
