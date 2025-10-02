@@ -154,17 +154,34 @@ const controller = {
   },
 
   delete: async (req, res) => {
-    const { id } = req.params.id;
-    try {
-      const result = await Store.deleteOne(id);
-      if (!result) {
-        return res.status(404).json({ message: 'Store not found' });
-      }
-      res.json({ message: 'Store deleted successfully' });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+  try {
+    const { id } = req.params;
+
+    const result = await Store.deleteOne({ _id: id });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Store not found' });
     }
-  },
+
+    res.json({ message: 'Store deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+
+  // delete: async (req, res) => {
+  //   const { id } = req.params.id;
+  //   try {
+  //     const result = await Store.deleteOne(id);
+  //     if (!result) {
+  //       return res.status(404).json({ message: 'Store not found' });
+  //     }
+  //     res.json({ message: 'Store deleted successfully' });
+  //   } catch (error) {
+  //     res.status(500).json({ message: error.message });
+  //   }
+  // },
 
     deleteSelectedStores: async (req, res) => {
      try {
